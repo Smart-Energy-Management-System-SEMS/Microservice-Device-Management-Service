@@ -1,0 +1,25 @@
+services:
+  device-management-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: device-management-service:local
+    container_name: device-management-service
+    env_file:
+      - .env
+    environment:
+      APP_ENV: local
+      GIN_MODE: release
+      PORT: 8083
+      AUTO_MIGRATE: false
+      KEEP_ALIVE_ENABLED: false
+      KAFKA_BROKERS: ${DOCKER_KAFKA_BROKERS:-host.docker.internal:9092}
+    ports:
+      - "8083:8083"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:$${PORT}/api/v1/device-management/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s

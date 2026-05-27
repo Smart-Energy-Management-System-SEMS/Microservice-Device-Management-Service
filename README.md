@@ -52,6 +52,42 @@ Health check:
 GET /api/v1/device-management/health
 ```
 
+## Docker
+
+El proyecto incluye:
+
+```text
+Dockerfile
+.dockerignore
+docker-compose.yml
+```
+
+Construir imagen:
+
+```bash
+docker build -t device-management-service .
+```
+
+Ejecutar contenedor usando tus variables locales:
+
+```bash
+docker run --env-file .env -p 8083:8083 device-management-service
+```
+
+Ejecutar con Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+Health check:
+
+```http
+GET http://localhost:8083/api/v1/device-management/health
+```
+
+Nota: `.env` no se copia dentro de la imagen y esta excluido por `.dockerignore`. Docker Compose lo lee en runtime con `env_file`. Si usas Kafka local instalado en tu maquina, dentro del contenedor `localhost` apunta al contenedor; por eso `docker-compose.yml` usa `host.docker.internal:9092` por defecto mediante `DOCKER_KAFKA_BROKERS`.
+
 ## Deploy en Render
 
 El repositorio incluye `render.yaml`, `scripts/render-start.sh`, `scripts/keepalive.sh` y `scripts/keepalive.ps1`.
