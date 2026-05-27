@@ -1,8 +1,8 @@
 package rest
 
 import (
+	httpinfrastructure "device-management-service/device-management/infrastructure/http"
 	"device-management-service/device-management/interfaces/rest/controllers"
-	sharedinfrastructure "device-management-service/shared/infrastructure"
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,10 +17,10 @@ type RouterDependencies struct {
 func NewRouter(dependencies RouterDependencies) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Logger(), gin.Recovery())
-	router.Use(sharedinfrastructure.CORSMiddleware(dependencies.CORSAllowedOrigins))
+	router.Use(httpinfrastructure.CORSMiddleware(dependencies.CORSAllowedOrigins))
 
 	api := router.Group("/api/v1/device-management")
-	api.GET("/health", Health)
+	api.GET("/health", controllers.Health)
 
 	dependencies.DeviceController.RegisterRoutes(api)
 	dependencies.BindingController.RegisterRoutes(api)
