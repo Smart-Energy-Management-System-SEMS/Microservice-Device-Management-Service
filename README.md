@@ -13,12 +13,12 @@ Microservicio Go para el Smart Energy Management System (SEMS). Gestiona disposi
 
 ## Variables de entorno
 
-Copia `.env.example` a `.env` y coloca tu cadena real de Neon:
+Copia `.env.example` a `.env` y coloca tu cadena real de Neon. No ejecutes el servicio con el placeholder `USER:PASSWORD@HOST:PORT/DB_NAME`, porque `PORT` debe ser un numero real como `5432`.
 
 ```env
 PORT=8083
 APP_ENV=local
-DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DB_NAME?sslmode=require
+DATABASE_URL=postgresql://neondb_owner:YOUR_PASSWORD@ep-example-123456.us-east-2.aws.neon.tech/neondb?sslmode=require
 DB_DRIVER=postgres
 KAFKA_BROKERS=localhost:9092
 KAFKA_CLIENT_ID=device-management-service
