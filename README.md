@@ -21,6 +21,9 @@ APP_ENV=local
 DATABASE_URL=postgresql://neondb_owner:YOUR_PASSWORD@ep-example-123456.us-east-2.aws.neon.tech/neondb?sslmode=require
 DB_DRIVER=postgres
 AUTO_MIGRATE=false
+KEEP_ALIVE_ENABLED=false
+KEEP_ALIVE_INTERVAL_SECONDS=600
+KEEP_ALIVE_PATH=/api/v1/device-management/health
 KAFKA_BROKERS=localhost:9092
 KAFKA_CLIENT_ID=device-management-service
 KAFKA_CONSUMER_GROUP=device-management-group
@@ -48,6 +51,35 @@ Health check:
 ```http
 GET /api/v1/device-management/health
 ```
+
+## Deploy en Render
+
+El repositorio incluye `render.yaml` y `scripts/render-start.sh`.
+
+Build command:
+
+```bash
+go build -o app .
+```
+
+Start command:
+
+```bash
+sh scripts/render-start.sh
+```
+
+Para Render, configura estas variables:
+
+```env
+APP_ENV=production
+PORT=10000
+AUTO_MIGRATE=false
+KEEP_ALIVE_ENABLED=true
+KEEP_ALIVE_INTERVAL_SECONDS=600
+DATABASE_URL=postgresql://...
+```
+
+Render define `RENDER_EXTERNAL_URL` para web services. El script lo usa para llamar periodicamente a `/api/v1/device-management/health`.
 
 ## Endpoints REST
 

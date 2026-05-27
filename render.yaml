@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: device-management-service
+    runtime: go
+    plan: free
+    buildCommand: go build -o app .
+    startCommand: sh scripts/render-start.sh
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: AUTO_MIGRATE
+        value: false
+      - key: KEEP_ALIVE_ENABLED
+        value: true
+      - key: KEEP_ALIVE_INTERVAL_SECONDS
+        value: 600
+      - key: DB_DRIVER
+        value: postgres
+      - key: DATABASE_URL
+        sync: false
+      - key: KAFKA_BROKERS
+        sync: false
+      - key: KAFKA_CLIENT_ID
+        value: device-management-service
+      - key: KAFKA_CONSUMER_GROUP
+        value: device-management-group
+      - key: API_GATEWAY_ALLOWED_ORIGIN
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
