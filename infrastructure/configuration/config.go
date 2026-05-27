@@ -18,6 +18,10 @@ type AppConfig struct {
 }
 
 func LoadAppConfig() AppConfig {
+	apiGatewayOrigin := getEnv("API_GATEWAY_ALLOWED_ORIGIN", "http://localhost:8080")
+	corsAllowedOrigins := splitCSV(getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:4200,http://localhost:5173,http://localhost:8080"))
+	corsAllowedOrigins = appendIfMissing(corsAllowedOrigins, apiGatewayOrigin)
+
 	return AppConfig{
 		Port:                    getEnv("PORT", "8083"),
 		AppEnv:                  getEnv("APP_ENV", "local"),
@@ -26,8 +30,8 @@ func LoadAppConfig() AppConfig {
 		KafkaBrokers:            splitCSV(getEnv("KAFKA_BROKERS", "localhost:9092")),
 		KafkaClientID:           getEnv("KAFKA_CLIENT_ID", "device-management-service"),
 		KafkaConsumerGroup:      getEnv("KAFKA_CONSUMER_GROUP", "device-management-group"),
-		APIGatewayAllowedOrigin: getEnv("API_GATEWAY_ALLOWED_ORIGIN", "http://localhost:8080"),
-		CORSAllowedOrigins:      splitCSV(getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:4200,http://localhost:5173,http://localhost:8080")),
+		APIGatewayAllowedOrigin: apiGatewayOrigin,
+		CORSAllowedOrigins:      corsAllowedOrigins,
 	}
 }
 
@@ -49,4 +53,16 @@ func splitCSV(value string) []string {
 		}
 	}
 	return result
+}
+
+func appendIfMissing(values []string, value string) []string {
+	for _, item := range values {
+		if item == value {
+			return values
+		}
+	}
+	if value == "" {
+		return values
+	}
+	return append(values, value)
 }

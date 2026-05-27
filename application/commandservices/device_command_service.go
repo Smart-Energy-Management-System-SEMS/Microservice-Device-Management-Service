@@ -2,6 +2,7 @@ package commandservices
 
 import (
 	"context"
+	"errors"
 
 	"device-management-service/application/eventhandlers"
 	"device-management-service/domain/model/aggregates"
@@ -23,6 +24,11 @@ func NewDeviceCommandService(deviceRepository repositories.DeviceRepository, eve
 func (s *DeviceCommandService) RegisterDevice(ctx context.Context, command commands.RegisterDeviceCommand) (*aggregates.Device, error) {
 	if _, err := s.deviceRepository.FindByExternalDeviceCode(ctx, command.ExternalDeviceCode); err == nil {
 		return nil, shared.NewConflictError("external_device_code already exists")
+	} else {
+		var appErr *shared.AppError
+		if !errors.As(err, &appErr) || appErr.Code != shared.ErrNotFound {
+			return nil, err
+		}
 	}
 	protocol, err := valueobjects.NewConnectionProtocol(command.ConnectionProtocol)
 	if err != nil {
