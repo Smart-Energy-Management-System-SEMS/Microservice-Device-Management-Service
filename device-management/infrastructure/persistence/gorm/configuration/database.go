@@ -12,7 +12,7 @@ import (
 )
 
 func ConnectDatabase(databaseURL string) (*gorm.DB, error) {
-	trimmedURL := strings.TrimSpace(databaseURL)
+	trimmedURL := normalizeDatabaseURL(strings.TrimSpace(databaseURL))
 	if trimmedURL == "" {
 		return nil, errors.New("DATABASE_URL is required. Set it in .env with your real Neon PostgreSQL connection string")
 	}
@@ -45,6 +45,13 @@ func containsPlaceholder(databaseURL string) bool {
 		}
 	}
 	return false
+}
+
+func normalizeDatabaseURL(databaseURL string) string {
+	if strings.HasPrefix(databaseURL, "jdbc:postgresql://") {
+		return strings.TrimPrefix(databaseURL, "jdbc:")
+	}
+	return databaseURL
 }
 
 func AutoMigrate(db *gorm.DB) error {
