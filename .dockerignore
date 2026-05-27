@@ -1,0 +1,16 @@
+.git
+.gitignore
+.idea
+
+.env
+.env.*
+!.env.example
+
+.gocache*
+app
+*.exe
+*.log
+
+Dockerfile
+docker-compose.yml
+Microservice-Devices-Management-Service.iml

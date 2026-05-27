@@ -1,0 +1,12 @@
+.env
+.env.*
+!.env.example
+
+.gocache*/
+app
+*.exe
+*.log
+
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/shelf/
