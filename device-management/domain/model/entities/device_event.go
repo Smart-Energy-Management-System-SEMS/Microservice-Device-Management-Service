@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	shared "device-management-service/shared/domain"
+	dmerrors "device-management-service/device-management/domain"
 	"github.com/google/uuid"
 )
 
@@ -18,10 +18,10 @@ type DeviceEvent struct {
 
 func NewDeviceEvent(deviceID uuid.UUID, eventType string, description *string, occurredAt *time.Time) (*DeviceEvent, error) {
 	if deviceID == uuid.Nil {
-		return nil, shared.NewValidationError("device_id is required")
+		return nil, dmerrors.NewValidationError("device_id is required")
 	}
 	if strings.TrimSpace(eventType) == "" {
-		return nil, shared.NewValidationError("event_type is required")
+		return nil, dmerrors.NewValidationError("event_type is required")
 	}
 	eventTime := time.Now().UTC()
 	if occurredAt != nil {

@@ -7,7 +7,7 @@ import (
 	"device-management-service/device-management/domain/model/aggregates"
 	domainrepositories "device-management-service/device-management/domain/repositories"
 	persistencemodel "device-management-service/device-management/infrastructure/persistence/gorm/model"
-	shared "device-management-service/shared/domain"
+	dmerrors "device-management-service/device-management/domain"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -23,7 +23,7 @@ func NewDeviceGormRepository(db *gorm.DB) domainrepositories.DeviceRepository {
 func (r *DeviceGormRepository) Save(ctx context.Context, device *aggregates.Device) error {
 	model := toDeviceModel(device)
 	if err := r.db.WithContext(ctx).Create(&model).Error; err != nil {
-		return shared.NewConflictError("device could not be saved")
+		return dmerrors.NewConflictError("device could not be saved")
 	}
 	return nil
 }
@@ -31,7 +31,7 @@ func (r *DeviceGormRepository) Save(ctx context.Context, device *aggregates.Devi
 func (r *DeviceGormRepository) Update(ctx context.Context, device *aggregates.Device) error {
 	model := toDeviceModel(device)
 	if err := r.db.WithContext(ctx).Save(&model).Error; err != nil {
-		return shared.NewInternalError("device could not be updated")
+		return dmerrors.NewInternalError("device could not be updated")
 	}
 	return nil
 }
@@ -40,10 +40,10 @@ func (r *DeviceGormRepository) FindByID(ctx context.Context, deviceID uuid.UUID)
 	var model persistencemodel.DeviceModel
 	err := r.db.WithContext(ctx).First(&model, "device_id = ?", deviceID).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, shared.NewNotFoundError("device not found")
+		return nil, dmerrors.NewNotFoundError("device not found")
 	}
 	if err != nil {
-		return nil, shared.NewInternalError("device could not be retrieved")
+		return nil, dmerrors.NewInternalError("device could not be retrieved")
 	}
 	return toDeviceDomain(model), nil
 }
@@ -52,10 +52,10 @@ func (r *DeviceGormRepository) FindByExternalDeviceCode(ctx context.Context, cod
 	var model persistencemodel.DeviceModel
 	err := r.db.WithContext(ctx).First(&model, "external_device_code = ?", code).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, shared.NewNotFoundError("device not found")
+		return nil, dmerrors.NewNotFoundError("device not found")
 	}
 	if err != nil {
-		return nil, shared.NewInternalError("device could not be retrieved")
+		return nil, dmerrors.NewInternalError("device could not be retrieved")
 	}
 	return toDeviceDomain(model), nil
 }
@@ -63,7 +63,7 @@ func (r *DeviceGormRepository) FindByExternalDeviceCode(ctx context.Context, cod
 func (r *DeviceGormRepository) FindAll(ctx context.Context) ([]aggregates.Device, error) {
 	var models []persistencemodel.DeviceModel
 	if err := r.db.WithContext(ctx).Order("registered_at DESC").Find(&models).Error; err != nil {
-		return nil, shared.NewInternalError("devices could not be retrieved")
+		return nil, dmerrors.NewInternalError("devices could not be retrieved")
 	}
 	return toDeviceDomains(models), nil
 }
@@ -71,7 +71,7 @@ func (r *DeviceGormRepository) FindAll(ctx context.Context) ([]aggregates.Device
 func (r *DeviceGormRepository) FindByUserID(ctx context.Context, userID uuid.UUID) ([]aggregates.Device, error) {
 	var models []persistencemodel.DeviceModel
 	if err := r.db.WithContext(ctx).Where("user_id = ?", userID).Order("registered_at DESC").Find(&models).Error; err != nil {
-		return nil, shared.NewInternalError("devices could not be retrieved")
+		return nil, dmerrors.NewInternalError("devices could not be retrieved")
 	}
 	return toDeviceDomains(models), nil
 }

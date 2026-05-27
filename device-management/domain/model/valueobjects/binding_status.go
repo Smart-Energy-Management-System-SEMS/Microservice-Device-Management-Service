@@ -1,6 +1,6 @@
 package valueobjects
 
-import shared "device-management-service/shared/domain"
+import dmerrors "device-management-service/device-management/domain"
 
 type BindingStatus string
 
@@ -13,7 +13,7 @@ const (
 func NewBindingStatus(value string) (BindingStatus, error) {
 	status := BindingStatus(value)
 	if !status.IsValid() {
-		return "", shared.NewValidationError("invalid binding status")
+		return "", dmerrors.NewValidationError("invalid binding status")
 	}
 	return status, nil
 }

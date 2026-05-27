@@ -6,7 +6,7 @@ import (
 	"device-management-service/device-management/domain/model/entities"
 	domainrepositories "device-management-service/device-management/domain/repositories"
 	persistencemodel "device-management-service/device-management/infrastructure/persistence/gorm/model"
-	shared "device-management-service/shared/domain"
+	dmerrors "device-management-service/device-management/domain"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -22,7 +22,7 @@ func NewDeviceEventGormRepository(db *gorm.DB) domainrepositories.DeviceEventRep
 func (r *DeviceEventGormRepository) Save(ctx context.Context, event *entities.DeviceEvent) error {
 	model := toEventModel(event)
 	if err := r.db.WithContext(ctx).Create(&model).Error; err != nil {
-		return shared.NewInternalError("event could not be saved")
+		return dmerrors.NewInternalError("event could not be saved")
 	}
 	return nil
 }
@@ -30,7 +30,7 @@ func (r *DeviceEventGormRepository) Save(ctx context.Context, event *entities.De
 func (r *DeviceEventGormRepository) FindByDeviceID(ctx context.Context, deviceID uuid.UUID) ([]entities.DeviceEvent, error) {
 	var models []persistencemodel.DeviceEventModel
 	if err := r.db.WithContext(ctx).Where("device_id = ?", deviceID).Order("occurred_at DESC").Find(&models).Error; err != nil {
-		return nil, shared.NewInternalError("events could not be retrieved")
+		return nil, dmerrors.NewInternalError("events could not be retrieved")
 	}
 	events := make([]entities.DeviceEvent, 0, len(models))
 	for _, model := range models {

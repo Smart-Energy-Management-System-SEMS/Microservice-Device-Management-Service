@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"device-management-service/device-management/domain/model/valueobjects"
-	shared "device-management-service/shared/domain"
+	dmerrors "device-management-service/device-management/domain"
 	"github.com/google/uuid"
 )
 
@@ -25,19 +25,19 @@ type Device struct {
 
 func RegisterDevice(externalCode string, userID uuid.UUID, name string, deviceType string, brand *string, model *string, protocol valueobjects.ConnectionProtocol) (*Device, error) {
 	if strings.TrimSpace(externalCode) == "" {
-		return nil, shared.NewValidationError("external_device_code is required")
+		return nil, dmerrors.NewValidationError("external_device_code is required")
 	}
 	if userID == uuid.Nil {
-		return nil, shared.NewValidationError("user_id is required")
+		return nil, dmerrors.NewValidationError("user_id is required")
 	}
 	if strings.TrimSpace(name) == "" {
-		return nil, shared.NewValidationError("device_name is required")
+		return nil, dmerrors.NewValidationError("device_name is required")
 	}
 	if strings.TrimSpace(deviceType) == "" {
-		return nil, shared.NewValidationError("device_type is required")
+		return nil, dmerrors.NewValidationError("device_type is required")
 	}
 	if !protocol.IsValid() {
-		return nil, shared.NewValidationError("connection_protocol is invalid")
+		return nil, dmerrors.NewValidationError("connection_protocol is invalid")
 	}
 	now := time.Now().UTC()
 	return &Device{
@@ -73,16 +73,16 @@ func RehydrateDevice(deviceID uuid.UUID, externalCode string, userID uuid.UUID, 
 
 func (d *Device) UpdateDetails(name string, deviceType string, brand *string, model *string, protocol valueobjects.ConnectionProtocol) error {
 	if d.IsRemoved() {
-		return shared.NewConflictError("removed devices cannot be updated")
+		return dmerrors.NewConflictError("removed devices cannot be updated")
 	}
 	if strings.TrimSpace(name) == "" {
-		return shared.NewValidationError("device_name is required")
+		return dmerrors.NewValidationError("device_name is required")
 	}
 	if strings.TrimSpace(deviceType) == "" {
-		return shared.NewValidationError("device_type is required")
+		return dmerrors.NewValidationError("device_type is required")
 	}
 	if !protocol.IsValid() {
-		return shared.NewValidationError("connection_protocol is invalid")
+		return dmerrors.NewValidationError("connection_protocol is invalid")
 	}
 	d.DeviceName = strings.TrimSpace(name)
 	d.DeviceType = strings.TrimSpace(deviceType)
@@ -95,10 +95,10 @@ func (d *Device) UpdateDetails(name string, deviceType string, brand *string, mo
 
 func (d *Device) ChangeStatus(next valueobjects.DeviceStatus) error {
 	if !next.IsValid() {
-		return shared.NewValidationError("device status is invalid")
+		return dmerrors.NewValidationError("device status is invalid")
 	}
 	if !d.Status.CanTransitionTo(next) {
-		return shared.NewConflictError("invalid device status transition")
+		return dmerrors.NewConflictError("invalid device status transition")
 	}
 	d.Status = next
 	d.UpdatedAt = time.Now().UTC()
@@ -111,14 +111,14 @@ func (d *Device) Remove() error {
 
 func (d *Device) CanBeBound() error {
 	if d.IsRemoved() {
-		return shared.NewConflictError("removed devices cannot be linked")
+		return dmerrors.NewConflictError("removed devices cannot be linked")
 	}
 	return nil
 }
 
 func (d *Device) CanUpdateConfiguration() error {
 	if d.IsRemoved() {
-		return shared.NewConflictError("removed devices cannot update configuration")
+		return dmerrors.NewConflictError("removed devices cannot update configuration")
 	}
 	return nil
 }

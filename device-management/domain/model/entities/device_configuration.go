@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	shared "device-management-service/shared/domain"
+	dmerrors "device-management-service/device-management/domain"
 	"github.com/google/uuid"
 )
 
@@ -18,10 +18,10 @@ type DeviceConfiguration struct {
 
 func NewDeviceConfiguration(deviceID uuid.UUID, key string, value *string) (*DeviceConfiguration, error) {
 	if deviceID == uuid.Nil {
-		return nil, shared.NewValidationError("device_id is required")
+		return nil, dmerrors.NewValidationError("device_id is required")
 	}
 	if strings.TrimSpace(key) == "" {
-		return nil, shared.NewValidationError("config_key is required")
+		return nil, dmerrors.NewValidationError("config_key is required")
 	}
 	return &DeviceConfiguration{
 		ConfigurationID: uuid.New(),

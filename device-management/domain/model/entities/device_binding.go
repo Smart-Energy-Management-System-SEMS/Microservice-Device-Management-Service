@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"device-management-service/device-management/domain/model/valueobjects"
-	shared "device-management-service/shared/domain"
+	dmerrors "device-management-service/device-management/domain"
 	"github.com/google/uuid"
 )
 
@@ -21,10 +21,10 @@ type DeviceBinding struct {
 
 func NewDeviceBinding(deviceID, userID uuid.UUID, homeID *uuid.UUID) (*DeviceBinding, error) {
 	if deviceID == uuid.Nil {
-		return nil, shared.NewValidationError("device_id is required")
+		return nil, dmerrors.NewValidationError("device_id is required")
 	}
 	if userID == uuid.Nil {
-		return nil, shared.NewValidationError("user_id is required")
+		return nil, dmerrors.NewValidationError("user_id is required")
 	}
 	now := time.Now().UTC()
 	return &DeviceBinding{
@@ -40,7 +40,7 @@ func NewDeviceBinding(deviceID, userID uuid.UUID, homeID *uuid.UUID) (*DeviceBin
 
 func (b *DeviceBinding) Unlink() error {
 	if b.BindingStatus == valueobjects.BindingStatusUnlinked {
-		return shared.NewConflictError("binding is already unlinked")
+		return dmerrors.NewConflictError("binding is already unlinked")
 	}
 	now := time.Now().UTC()
 	b.BindingStatus = valueobjects.BindingStatusUnlinked

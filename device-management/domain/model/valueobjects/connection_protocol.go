@@ -1,6 +1,6 @@
 package valueobjects
 
-import shared "device-management-service/shared/domain"
+import dmerrors "device-management-service/device-management/domain"
 
 type ConnectionProtocol string
 
@@ -12,7 +12,7 @@ const (
 func NewConnectionProtocol(value string) (ConnectionProtocol, error) {
 	protocol := ConnectionProtocol(value)
 	if !protocol.IsValid() {
-		return "", shared.NewValidationError("invalid connection protocol")
+		return "", dmerrors.NewValidationError("invalid connection protocol")
 	}
 	return protocol, nil
 }

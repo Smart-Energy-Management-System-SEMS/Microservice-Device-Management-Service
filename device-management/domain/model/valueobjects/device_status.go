@@ -1,6 +1,6 @@
 package valueobjects
 
-import shared "device-management-service/shared/domain"
+import dmerrors "device-management-service/device-management/domain"
 
 type DeviceStatus string
 
@@ -14,7 +14,7 @@ const (
 func NewDeviceStatus(value string) (DeviceStatus, error) {
 	status := DeviceStatus(value)
 	if !status.IsValid() {
-		return "", shared.NewValidationError("invalid device status")
+		return "", dmerrors.NewValidationError("invalid device status")
 	}
 	return status, nil
 }

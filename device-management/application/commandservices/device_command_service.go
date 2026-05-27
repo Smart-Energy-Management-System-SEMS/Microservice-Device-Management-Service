@@ -10,7 +10,7 @@ import (
 	"device-management-service/device-management/domain/model/valueobjects"
 	"device-management-service/device-management/domain/repositories"
 	"device-management-service/device-management/interfaces/acl"
-	shared "device-management-service/shared/domain"
+	dmerrors "device-management-service/device-management/domain"
 )
 
 type DeviceCommandService struct {
@@ -28,10 +28,10 @@ func (s *DeviceCommandService) RegisterDevice(ctx context.Context, command comma
 		return nil, err
 	}
 	if _, err := s.deviceRepository.FindByExternalDeviceCode(ctx, command.ExternalDeviceCode); err == nil {
-		return nil, shared.NewConflictError("external_device_code already exists")
+		return nil, dmerrors.NewConflictError("external_device_code already exists")
 	} else {
-		var appErr *shared.AppError
-		if !errors.As(err, &appErr) || appErr.Code != shared.ErrNotFound {
+		var appErr *dmerrors.AppError
+		if !errors.As(err, &appErr) || appErr.Code != dmerrors.ErrNotFound {
 			return nil, err
 		}
 	}

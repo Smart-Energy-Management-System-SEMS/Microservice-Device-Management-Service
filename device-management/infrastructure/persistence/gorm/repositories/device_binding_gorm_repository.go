@@ -7,7 +7,7 @@ import (
 	"device-management-service/device-management/domain/model/entities"
 	domainrepositories "device-management-service/device-management/domain/repositories"
 	persistencemodel "device-management-service/device-management/infrastructure/persistence/gorm/model"
-	shared "device-management-service/shared/domain"
+	dmerrors "device-management-service/device-management/domain"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -23,7 +23,7 @@ func NewDeviceBindingGormRepository(db *gorm.DB) domainrepositories.DeviceBindin
 func (r *DeviceBindingGormRepository) Save(ctx context.Context, binding *entities.DeviceBinding) error {
 	model := toBindingModel(binding)
 	if err := r.db.WithContext(ctx).Create(&model).Error; err != nil {
-		return shared.NewInternalError("binding could not be saved")
+		return dmerrors.NewInternalError("binding could not be saved")
 	}
 	return nil
 }
@@ -31,7 +31,7 @@ func (r *DeviceBindingGormRepository) Save(ctx context.Context, binding *entitie
 func (r *DeviceBindingGormRepository) Update(ctx context.Context, binding *entities.DeviceBinding) error {
 	model := toBindingModel(binding)
 	if err := r.db.WithContext(ctx).Save(&model).Error; err != nil {
-		return shared.NewInternalError("binding could not be updated")
+		return dmerrors.NewInternalError("binding could not be updated")
 	}
 	return nil
 }
@@ -40,10 +40,10 @@ func (r *DeviceBindingGormRepository) FindByID(ctx context.Context, bindingID uu
 	var model persistencemodel.DeviceBindingModel
 	err := r.db.WithContext(ctx).First(&model, "binding_id = ?", bindingID).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, shared.NewNotFoundError("binding not found")
+		return nil, dmerrors.NewNotFoundError("binding not found")
 	}
 	if err != nil {
-		return nil, shared.NewInternalError("binding could not be retrieved")
+		return nil, dmerrors.NewInternalError("binding could not be retrieved")
 	}
 	return toBindingDomain(model), nil
 }
@@ -51,7 +51,7 @@ func (r *DeviceBindingGormRepository) FindByID(ctx context.Context, bindingID uu
 func (r *DeviceBindingGormRepository) FindByDeviceID(ctx context.Context, deviceID uuid.UUID) ([]entities.DeviceBinding, error) {
 	var models []persistencemodel.DeviceBindingModel
 	if err := r.db.WithContext(ctx).Where("device_id = ?", deviceID).Order("linked_at DESC").Find(&models).Error; err != nil {
-		return nil, shared.NewInternalError("bindings could not be retrieved")
+		return nil, dmerrors.NewInternalError("bindings could not be retrieved")
 	}
 	return toBindingDomains(models), nil
 }
@@ -59,7 +59,7 @@ func (r *DeviceBindingGormRepository) FindByDeviceID(ctx context.Context, device
 func (r *DeviceBindingGormRepository) FindByUserID(ctx context.Context, userID uuid.UUID) ([]entities.DeviceBinding, error) {
 	var models []persistencemodel.DeviceBindingModel
 	if err := r.db.WithContext(ctx).Where("user_id = ?", userID).Order("linked_at DESC").Find(&models).Error; err != nil {
-		return nil, shared.NewInternalError("bindings could not be retrieved")
+		return nil, dmerrors.NewInternalError("bindings could not be retrieved")
 	}
 	return toBindingDomains(models), nil
 }
