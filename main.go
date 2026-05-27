@@ -3,16 +3,16 @@ package main
 import (
 	"log"
 
-	"device-management-service/application/commandservices"
-	"device-management-service/application/eventhandlers"
-	"device-management-service/application/queryservices"
-	"device-management-service/domain/services"
-	appconfiguration "device-management-service/infrastructure/configuration"
-	kafkamessaging "device-management-service/infrastructure/messaging/kafka"
-	gormconfiguration "device-management-service/infrastructure/persistence/gorm/configuration"
-	gormrepositories "device-management-service/infrastructure/persistence/gorm/repositories"
-	"device-management-service/interfaces/rest"
-	"device-management-service/interfaces/rest/controllers"
+	"device-management-service/device-management/application/commandservices"
+	"device-management-service/device-management/application/eventhandlers"
+	"device-management-service/device-management/application/queryservices"
+	"device-management-service/device-management/domain/services"
+	appconfiguration "device-management-service/device-management/infrastructure/configuration"
+	kafkamessaging "device-management-service/device-management/infrastructure/messaging/kafka"
+	gormconfiguration "device-management-service/device-management/infrastructure/persistence/gorm/configuration"
+	gormrepositories "device-management-service/device-management/infrastructure/persistence/gorm/repositories"
+	"device-management-service/device-management/interfaces/rest"
+	"device-management-service/device-management/interfaces/rest/controllers"
 	"github.com/joho/godotenv"
 )
 

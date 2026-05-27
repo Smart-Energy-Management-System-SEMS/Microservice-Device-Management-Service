@@ -9,7 +9,7 @@ Microservicio Go para el Smart Energy Management System (SEMS). Gestiona disposi
 - GORM ORM
 - PostgreSQL en Neon mediante `DATABASE_URL`
 - Apache Kafka mediante `github.com/segmentio/kafka-go`
-- Arquitectura DDD con capas `domain`, `application`, `infrastructure`, `interfaces` y `shared`
+- Arquitectura DDD con capas `device-management/domain`, `device-management/application`, `device-management/infrastructure`, `device-management/interfaces` y `shared`
 
 ## Variables de entorno
 
