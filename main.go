@@ -11,6 +11,7 @@ import (
 	kafkamessaging "device-management-service/device-management/infrastructure/messaging/kafka"
 	gormconfiguration "device-management-service/device-management/infrastructure/persistence/gorm/configuration"
 	gormrepositories "device-management-service/device-management/infrastructure/persistence/gorm/repositories"
+	"device-management-service/device-management/interfaces/acl"
 	"device-management-service/device-management/interfaces/rest"
 	"device-management-service/device-management/interfaces/rest/controllers"
 	"github.com/joho/godotenv"
@@ -39,9 +40,10 @@ func main() {
 	kafkaProducer := kafkamessaging.NewProducer(config.KafkaBrokers, config.KafkaClientID)
 	integrationEventHandler := eventhandlers.NewDeviceIntegrationEventHandler(kafkaProducer)
 	deviceDomainService := services.NewDeviceDomainService()
+	externalReferenceService := acl.NewLocalExternalReferenceService()
 
-	deviceCommandService := commandservices.NewDeviceCommandService(deviceRepository, integrationEventHandler)
-	bindingCommandService := commandservices.NewDeviceBindingCommandService(deviceRepository, bindingRepository, deviceDomainService, integrationEventHandler)
+	deviceCommandService := commandservices.NewDeviceCommandService(deviceRepository, externalReferenceService, integrationEventHandler)
+	bindingCommandService := commandservices.NewDeviceBindingCommandService(deviceRepository, bindingRepository, deviceDomainService, externalReferenceService, integrationEventHandler)
 	configurationCommandService := commandservices.NewDeviceConfigurationCommandService(deviceRepository, configurationRepository, deviceDomainService, integrationEventHandler)
 	eventCommandService := commandservices.NewDeviceEventCommandService(deviceRepository, eventRepository, integrationEventHandler)
 

@@ -9,19 +9,24 @@ import (
 	"device-management-service/device-management/domain/model/commands"
 	"device-management-service/device-management/domain/model/valueobjects"
 	"device-management-service/device-management/domain/repositories"
+	"device-management-service/device-management/interfaces/acl"
 	shared "device-management-service/shared/domain"
 )
 
 type DeviceCommandService struct {
 	deviceRepository repositories.DeviceRepository
+	referenceService acl.ExternalReferenceService
 	eventHandler     *eventhandlers.DeviceIntegrationEventHandler
 }
 
-func NewDeviceCommandService(deviceRepository repositories.DeviceRepository, eventHandler *eventhandlers.DeviceIntegrationEventHandler) *DeviceCommandService {
-	return &DeviceCommandService{deviceRepository: deviceRepository, eventHandler: eventHandler}
+func NewDeviceCommandService(deviceRepository repositories.DeviceRepository, referenceService acl.ExternalReferenceService, eventHandler *eventhandlers.DeviceIntegrationEventHandler) *DeviceCommandService {
+	return &DeviceCommandService{deviceRepository: deviceRepository, referenceService: referenceService, eventHandler: eventHandler}
 }
 
 func (s *DeviceCommandService) RegisterDevice(ctx context.Context, command commands.RegisterDeviceCommand) (*aggregates.Device, error) {
+	if err := s.referenceService.ValidateUserReference(ctx, command.UserID); err != nil {
+		return nil, err
+	}
 	if _, err := s.deviceRepository.FindByExternalDeviceCode(ctx, command.ExternalDeviceCode); err == nil {
 		return nil, shared.NewConflictError("external_device_code already exists")
 	} else {

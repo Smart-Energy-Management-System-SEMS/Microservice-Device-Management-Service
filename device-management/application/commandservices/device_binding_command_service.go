@@ -8,25 +8,34 @@ import (
 	"device-management-service/device-management/domain/model/entities"
 	"device-management-service/device-management/domain/repositories"
 	"device-management-service/device-management/domain/services"
+	"device-management-service/device-management/interfaces/acl"
 )
 
 type DeviceBindingCommandService struct {
 	deviceRepository  repositories.DeviceRepository
 	bindingRepository repositories.DeviceBindingRepository
 	domainService     *services.DeviceDomainService
+	referenceService  acl.ExternalReferenceService
 	eventHandler      *eventhandlers.DeviceIntegrationEventHandler
 }
 
-func NewDeviceBindingCommandService(deviceRepository repositories.DeviceRepository, bindingRepository repositories.DeviceBindingRepository, domainService *services.DeviceDomainService, eventHandler *eventhandlers.DeviceIntegrationEventHandler) *DeviceBindingCommandService {
+func NewDeviceBindingCommandService(deviceRepository repositories.DeviceRepository, bindingRepository repositories.DeviceBindingRepository, domainService *services.DeviceDomainService, referenceService acl.ExternalReferenceService, eventHandler *eventhandlers.DeviceIntegrationEventHandler) *DeviceBindingCommandService {
 	return &DeviceBindingCommandService{
 		deviceRepository:  deviceRepository,
 		bindingRepository: bindingRepository,
 		domainService:     domainService,
+		referenceService:  referenceService,
 		eventHandler:      eventHandler,
 	}
 }
 
 func (s *DeviceBindingCommandService) CreateBinding(ctx context.Context, command commands.CreateDeviceBindingCommand) (*entities.DeviceBinding, error) {
+	if err := s.referenceService.ValidateUserReference(ctx, command.UserID); err != nil {
+		return nil, err
+	}
+	if err := s.referenceService.ValidateHomeReference(ctx, command.HomeID); err != nil {
+		return nil, err
+	}
 	device, err := s.deviceRepository.FindByID(ctx, command.DeviceID)
 	if err != nil {
 		return nil, err
