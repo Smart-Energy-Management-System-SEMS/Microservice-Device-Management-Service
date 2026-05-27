@@ -10,5 +10,4 @@ app
 .idea/workspace.xml
 .idea/tasks.xml
 .idea/shelf/
-*.iml
 .idea/vcs.xml
