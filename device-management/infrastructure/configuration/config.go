@@ -10,6 +10,7 @@ type AppConfig struct {
 	AppEnv                  string
 	DatabaseURL             string
 	DBDriver                string
+	AutoMigrate             bool
 	KafkaBrokers            []string
 	KafkaClientID           string
 	KafkaConsumerGroup      string
@@ -27,6 +28,7 @@ func LoadAppConfig() AppConfig {
 		AppEnv:                  getEnv("APP_ENV", "local"),
 		DatabaseURL:             getEnv("DATABASE_URL", ""),
 		DBDriver:                getEnv("DB_DRIVER", "postgres"),
+		AutoMigrate:             getBoolEnv("AUTO_MIGRATE", false),
 		KafkaBrokers:            splitCSV(getEnv("KAFKA_BROKERS", "localhost:9092")),
 		KafkaClientID:           getEnv("KAFKA_CLIENT_ID", "device-management-service"),
 		KafkaConsumerGroup:      getEnv("KAFKA_CONSUMER_GROUP", "device-management-group"),
@@ -41,6 +43,14 @@ func getEnv(key string, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func getBoolEnv(key string, fallback bool) bool {
+	value := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
+	if value == "" {
+		return fallback
+	}
+	return value == "true" || value == "1" || value == "yes"
 }
 
 func splitCSV(value string) []string {

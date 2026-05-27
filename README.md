@@ -20,6 +20,7 @@ PORT=8083
 APP_ENV=local
 DATABASE_URL=postgresql://neondb_owner:YOUR_PASSWORD@ep-example-123456.us-east-2.aws.neon.tech/neondb?sslmode=require
 DB_DRIVER=postgres
+AUTO_MIGRATE=false
 KAFKA_BROKERS=localhost:9092
 KAFKA_CLIENT_ID=device-management-service
 KAFKA_CONSUMER_GROUP=device-management-group
@@ -35,6 +36,8 @@ go run .
 ```
 
 El servicio arranca por defecto en:
+
+`AUTO_MIGRATE=false` es el valor recomendado cuando Neon ya tiene las tablas creadas. Usa `AUTO_MIGRATE=true` solo para una base vacia donde quieres que GORM cree o ajuste el esquema.
 
 ```text
 http://localhost:8083/api/v1/device-management

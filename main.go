@@ -28,8 +28,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("database connection failed: %v", err)
 	}
-	if err := gormconfiguration.AutoMigrate(db); err != nil {
-		log.Fatalf("database migration failed: %v", err)
+	if config.AutoMigrate {
+		if err := gormconfiguration.AutoMigrate(db); err != nil {
+			log.Fatalf("database migration failed: %v", err)
+		}
+	} else {
+		log.Println("database auto migration disabled")
 	}
 
 	deviceRepository := gormrepositories.NewDeviceGormRepository(db)
