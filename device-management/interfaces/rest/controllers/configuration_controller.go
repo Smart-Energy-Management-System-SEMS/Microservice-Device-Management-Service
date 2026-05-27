@@ -9,7 +9,6 @@ import (
 	"device-management-service/device-management/domain/model/queries"
 	"device-management-service/device-management/interfaces/rest/resources"
 	"device-management-service/device-management/interfaces/rest/transform"
-	sharedinterfaces "device-management-service/shared/interfaces"
 	"github.com/gin-gonic/gin"
 )
 
@@ -31,12 +30,12 @@ func (c *ConfigurationController) RegisterRoutes(router *gin.RouterGroup) {
 func (c *ConfigurationController) CreateConfiguration(ctx *gin.Context) {
 	deviceID, err := parseUUID(ctx.Param("deviceId"), "deviceId")
 	if err != nil {
-		sharedinterfaces.RespondError(ctx, err)
+		RespondError(ctx, err)
 		return
 	}
 	var resource resources.CreateDeviceConfigurationResource
 	if err := ctx.ShouldBindJSON(&resource); err != nil {
-		sharedinterfaces.RespondValidation(ctx, err.Error())
+		RespondValidation(ctx, err.Error())
 		return
 	}
 	configuration, err := c.commandService.CreateConfiguration(ctx.Request.Context(), commands.CreateDeviceConfigurationCommand{
@@ -45,7 +44,7 @@ func (c *ConfigurationController) CreateConfiguration(ctx *gin.Context) {
 		ConfigValue: resource.ConfigValue,
 	})
 	if err != nil {
-		sharedinterfaces.RespondError(ctx, err)
+		RespondError(ctx, err)
 		return
 	}
 	ctx.JSON(http.StatusCreated, transform.ToConfigurationResource(configuration))
@@ -54,12 +53,12 @@ func (c *ConfigurationController) CreateConfiguration(ctx *gin.Context) {
 func (c *ConfigurationController) GetConfigurationsByDeviceID(ctx *gin.Context) {
 	deviceID, err := parseUUID(ctx.Param("deviceId"), "deviceId")
 	if err != nil {
-		sharedinterfaces.RespondError(ctx, err)
+		RespondError(ctx, err)
 		return
 	}
 	configurations, err := c.queryService.GetByDeviceID(ctx.Request.Context(), queries.GetDeviceConfigurationsQuery{DeviceID: deviceID})
 	if err != nil {
-		sharedinterfaces.RespondError(ctx, err)
+		RespondError(ctx, err)
 		return
 	}
 	ctx.JSON(http.StatusOK, transform.ToConfigurationResources(configurations))
@@ -68,12 +67,12 @@ func (c *ConfigurationController) GetConfigurationsByDeviceID(ctx *gin.Context) 
 func (c *ConfigurationController) UpdateConfiguration(ctx *gin.Context) {
 	configurationID, err := parseUUID(ctx.Param("configurationId"), "configurationId")
 	if err != nil {
-		sharedinterfaces.RespondError(ctx, err)
+		RespondError(ctx, err)
 		return
 	}
 	var resource resources.UpdateDeviceConfigurationResource
 	if err := ctx.ShouldBindJSON(&resource); err != nil {
-		sharedinterfaces.RespondValidation(ctx, err.Error())
+		RespondValidation(ctx, err.Error())
 		return
 	}
 	configuration, err := c.commandService.UpdateConfiguration(ctx.Request.Context(), commands.UpdateDeviceConfigurationCommand{
@@ -81,7 +80,7 @@ func (c *ConfigurationController) UpdateConfiguration(ctx *gin.Context) {
 		ConfigValue:     resource.ConfigValue,
 	})
 	if err != nil {
-		sharedinterfaces.RespondError(ctx, err)
+		RespondError(ctx, err)
 		return
 	}
 	ctx.JSON(http.StatusOK, transform.ToConfigurationResource(configuration))

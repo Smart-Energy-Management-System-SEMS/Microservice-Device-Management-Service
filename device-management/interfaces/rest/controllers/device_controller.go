@@ -9,7 +9,6 @@ import (
 	"device-management-service/device-management/domain/model/queries"
 	"device-management-service/device-management/interfaces/rest/resources"
 	"device-management-service/device-management/interfaces/rest/transform"
-	sharedinterfaces "device-management-service/shared/interfaces"
 	"github.com/gin-gonic/gin"
 )
 
@@ -35,12 +34,12 @@ func (c *DeviceController) RegisterRoutes(router *gin.RouterGroup) {
 func (c *DeviceController) CreateDevice(ctx *gin.Context) {
 	var resource resources.CreateDeviceResource
 	if err := ctx.ShouldBindJSON(&resource); err != nil {
-		sharedinterfaces.RespondValidation(ctx, err.Error())
+		RespondValidation(ctx, err.Error())
 		return
 	}
 	userID, err := parseUUID(resource.UserID, "userId")
 	if err != nil {
-		sharedinterfaces.RespondError(ctx, err)
+		RespondError(ctx, err)
 		return
 	}
 	device, err := c.commandService.RegisterDevice(ctx.Request.Context(), commands.RegisterDeviceCommand{
@@ -53,7 +52,7 @@ func (c *DeviceController) CreateDevice(ctx *gin.Context) {
 		ConnectionProtocol: resource.ConnectionProtocol,
 	})
 	if err != nil {
-		sharedinterfaces.RespondError(ctx, err)
+		RespondError(ctx, err)
 		return
 	}
 	ctx.JSON(http.StatusCreated, transform.ToDeviceResource(device))
@@ -62,7 +61,7 @@ func (c *DeviceController) CreateDevice(ctx *gin.Context) {
 func (c *DeviceController) GetDevices(ctx *gin.Context) {
 	devices, err := c.queryService.GetAll(ctx.Request.Context())
 	if err != nil {
-		sharedinterfaces.RespondError(ctx, err)
+		RespondError(ctx, err)
 		return
 	}
 	ctx.JSON(http.StatusOK, transform.ToDeviceResources(devices))
@@ -71,12 +70,12 @@ func (c *DeviceController) GetDevices(ctx *gin.Context) {
 func (c *DeviceController) GetDeviceByID(ctx *gin.Context) {
 	deviceID, err := parseUUID(ctx.Param("deviceId"), "deviceId")
 	if err != nil {
-		sharedinterfaces.RespondError(ctx, err)
+		RespondError(ctx, err)
 		return
 	}
 	device, err := c.queryService.GetByID(ctx.Request.Context(), queries.GetDeviceByIDQuery{DeviceID: deviceID})
 	if err != nil {
-		sharedinterfaces.RespondError(ctx, err)
+		RespondError(ctx, err)
 		return
 	}
 	ctx.JSON(http.StatusOK, transform.ToDeviceResource(device))
@@ -85,12 +84,12 @@ func (c *DeviceController) GetDeviceByID(ctx *gin.Context) {
 func (c *DeviceController) GetDevicesByUserID(ctx *gin.Context) {
 	userID, err := parseUUID(ctx.Param("userId"), "userId")
 	if err != nil {
-		sharedinterfaces.RespondError(ctx, err)
+		RespondError(ctx, err)
 		return
 	}
 	devices, err := c.queryService.GetByUserID(ctx.Request.Context(), queries.GetDevicesByUserQuery{UserID: userID})
 	if err != nil {
-		sharedinterfaces.RespondError(ctx, err)
+		RespondError(ctx, err)
 		return
 	}
 	ctx.JSON(http.StatusOK, transform.ToDeviceResources(devices))
@@ -99,12 +98,12 @@ func (c *DeviceController) GetDevicesByUserID(ctx *gin.Context) {
 func (c *DeviceController) UpdateDevice(ctx *gin.Context) {
 	deviceID, err := parseUUID(ctx.Param("deviceId"), "deviceId")
 	if err != nil {
-		sharedinterfaces.RespondError(ctx, err)
+		RespondError(ctx, err)
 		return
 	}
 	var resource resources.UpdateDeviceResource
 	if err := ctx.ShouldBindJSON(&resource); err != nil {
-		sharedinterfaces.RespondValidation(ctx, err.Error())
+		RespondValidation(ctx, err.Error())
 		return
 	}
 	device, err := c.commandService.UpdateDevice(ctx.Request.Context(), commands.UpdateDeviceCommand{
@@ -116,7 +115,7 @@ func (c *DeviceController) UpdateDevice(ctx *gin.Context) {
 		ConnectionProtocol: resource.ConnectionProtocol,
 	})
 	if err != nil {
-		sharedinterfaces.RespondError(ctx, err)
+		RespondError(ctx, err)
 		return
 	}
 	ctx.JSON(http.StatusOK, transform.ToDeviceResource(device))
@@ -125,17 +124,17 @@ func (c *DeviceController) UpdateDevice(ctx *gin.Context) {
 func (c *DeviceController) UpdateDeviceStatus(ctx *gin.Context) {
 	deviceID, err := parseUUID(ctx.Param("deviceId"), "deviceId")
 	if err != nil {
-		sharedinterfaces.RespondError(ctx, err)
+		RespondError(ctx, err)
 		return
 	}
 	var resource resources.UpdateDeviceStatusResource
 	if err := ctx.ShouldBindJSON(&resource); err != nil {
-		sharedinterfaces.RespondValidation(ctx, err.Error())
+		RespondValidation(ctx, err.Error())
 		return
 	}
 	device, err := c.commandService.UpdateDeviceStatus(ctx.Request.Context(), commands.UpdateDeviceStatusCommand{DeviceID: deviceID, Status: resource.Status})
 	if err != nil {
-		sharedinterfaces.RespondError(ctx, err)
+		RespondError(ctx, err)
 		return
 	}
 	ctx.JSON(http.StatusOK, transform.ToDeviceResource(device))
@@ -144,12 +143,12 @@ func (c *DeviceController) UpdateDeviceStatus(ctx *gin.Context) {
 func (c *DeviceController) DeleteDevice(ctx *gin.Context) {
 	deviceID, err := parseUUID(ctx.Param("deviceId"), "deviceId")
 	if err != nil {
-		sharedinterfaces.RespondError(ctx, err)
+		RespondError(ctx, err)
 		return
 	}
 	device, err := c.commandService.DeleteDevice(ctx.Request.Context(), commands.DeleteDeviceCommand{DeviceID: deviceID})
 	if err != nil {
-		sharedinterfaces.RespondError(ctx, err)
+		RespondError(ctx, err)
 		return
 	}
 	ctx.JSON(http.StatusOK, transform.ToDeviceResource(device))

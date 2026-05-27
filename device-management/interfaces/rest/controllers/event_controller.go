@@ -9,7 +9,6 @@ import (
 	"device-management-service/device-management/domain/model/queries"
 	"device-management-service/device-management/interfaces/rest/resources"
 	"device-management-service/device-management/interfaces/rest/transform"
-	sharedinterfaces "device-management-service/shared/interfaces"
 	"github.com/gin-gonic/gin"
 )
 
@@ -30,12 +29,12 @@ func (c *EventController) RegisterRoutes(router *gin.RouterGroup) {
 func (c *EventController) RecordEvent(ctx *gin.Context) {
 	deviceID, err := parseUUID(ctx.Param("deviceId"), "deviceId")
 	if err != nil {
-		sharedinterfaces.RespondError(ctx, err)
+		RespondError(ctx, err)
 		return
 	}
 	var resource resources.CreateDeviceEventResource
 	if err := ctx.ShouldBindJSON(&resource); err != nil {
-		sharedinterfaces.RespondValidation(ctx, err.Error())
+		RespondValidation(ctx, err.Error())
 		return
 	}
 	event, err := c.commandService.RecordEvent(ctx.Request.Context(), commands.RecordDeviceEventCommand{
@@ -45,7 +44,7 @@ func (c *EventController) RecordEvent(ctx *gin.Context) {
 		OccurredAt:  resource.OccurredAt,
 	})
 	if err != nil {
-		sharedinterfaces.RespondError(ctx, err)
+		RespondError(ctx, err)
 		return
 	}
 	ctx.JSON(http.StatusCreated, transform.ToEventResource(event))
@@ -54,12 +53,12 @@ func (c *EventController) RecordEvent(ctx *gin.Context) {
 func (c *EventController) GetEventsByDeviceID(ctx *gin.Context) {
 	deviceID, err := parseUUID(ctx.Param("deviceId"), "deviceId")
 	if err != nil {
-		sharedinterfaces.RespondError(ctx, err)
+		RespondError(ctx, err)
 		return
 	}
 	events, err := c.queryService.GetByDeviceID(ctx.Request.Context(), queries.GetDeviceEventsQuery{DeviceID: deviceID})
 	if err != nil {
-		sharedinterfaces.RespondError(ctx, err)
+		RespondError(ctx, err)
 		return
 	}
 	ctx.JSON(http.StatusOK, transform.ToEventResources(events))
