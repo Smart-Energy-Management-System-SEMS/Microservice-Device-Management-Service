@@ -54,7 +54,7 @@ GET /api/v1/device-management/health
 
 ## Deploy en Render
 
-El repositorio incluye `render.yaml` y `scripts/render-start.sh`.
+El repositorio incluye `render.yaml`, `scripts/render-start.sh`, `scripts/keepalive.sh` y `scripts/keepalive.ps1`.
 
 Build command:
 
@@ -79,7 +79,20 @@ KEEP_ALIVE_INTERVAL_SECONDS=600
 DATABASE_URL=postgresql://...
 ```
 
-Render define `RENDER_EXTERNAL_URL` para web services. El script lo usa para llamar periodicamente a `/api/v1/device-management/health`.
+Render define `RENDER_EXTERNAL_URL` para web services. `render-start.sh` arranca el binario y ejecuta `keepalive.sh` en segundo plano para llamar periodicamente a `/api/v1/device-management/health`.
+
+Para probar el keep-alive manualmente:
+
+```bash
+KEEP_ALIVE_URL=https://tu-servicio.onrender.com sh scripts/keepalive.sh
+```
+
+En Windows PowerShell:
+
+```powershell
+$env:KEEP_ALIVE_URL="https://tu-servicio.onrender.com"
+.\scripts\keepalive.ps1
+```
 
 ## Endpoints REST
 
