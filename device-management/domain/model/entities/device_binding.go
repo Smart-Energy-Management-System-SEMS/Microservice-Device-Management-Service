@@ -3,8 +3,8 @@ package entities
 import (
 	"time"
 
-	"device-management-service/device-management/domain/model/valueobjects"
 	dmerrors "device-management-service/device-management/domain"
+	"device-management-service/device-management/domain/model/valueobjects"
 	"github.com/google/uuid"
 )
 

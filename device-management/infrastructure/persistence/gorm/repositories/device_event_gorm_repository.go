@@ -3,10 +3,10 @@ package repositories
 import (
 	"context"
 
+	dmerrors "device-management-service/device-management/domain"
 	"device-management-service/device-management/domain/model/entities"
 	domainrepositories "device-management-service/device-management/domain/repositories"
 	persistencemodel "device-management-service/device-management/infrastructure/persistence/gorm/model"
-	dmerrors "device-management-service/device-management/domain"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )

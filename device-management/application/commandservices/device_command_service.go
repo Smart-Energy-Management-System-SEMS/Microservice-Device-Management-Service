@@ -5,12 +5,12 @@ import (
 	"errors"
 
 	"device-management-service/device-management/application/eventhandlers"
+	dmerrors "device-management-service/device-management/domain"
 	"device-management-service/device-management/domain/model/aggregates"
 	"device-management-service/device-management/domain/model/commands"
 	"device-management-service/device-management/domain/model/valueobjects"
 	"device-management-service/device-management/domain/repositories"
 	"device-management-service/device-management/interfaces/acl"
-	dmerrors "device-management-service/device-management/domain"
 )
 
 type DeviceCommandService struct {
