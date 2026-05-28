@@ -2,9 +2,11 @@ package main
 
 import (
 	"log"
+	"time"
 
 	"device-management-service/device-management/application/commandservices"
 	"device-management-service/device-management/application/eventhandlers"
+	"device-management-service/device-management/application/outboundservices"
 	"device-management-service/device-management/application/queryservices"
 	"device-management-service/device-management/domain/services"
 	appconfiguration "device-management-service/device-management/infrastructure/configuration"
@@ -41,8 +43,16 @@ func main() {
 	configurationRepository := gormrepositories.NewDeviceConfigurationGormRepository(db)
 	eventRepository := gormrepositories.NewDeviceEventGormRepository(db)
 
-	kafkaProducer := kafkamessaging.NewProducer(config.KafkaBrokers, config.KafkaClientID)
-	integrationEventHandler := eventhandlers.NewDeviceIntegrationEventHandler(kafkaProducer)
+	var deviceEventPublisher outboundservices.DeviceEventPublisher = kafkamessaging.NewNoopPublisher()
+	if config.KafkaEnabled {
+		kafkaProducer := kafkamessaging.NewProducer(config.KafkaBrokers, config.KafkaClientID, time.Duration(config.KafkaWriteTimeoutMS)*time.Millisecond)
+		defer kafkaProducer.Close()
+		deviceEventPublisher = kafkaProducer
+		log.Printf("kafka publishing enabled with brokers=%v timeout_ms=%d", config.KafkaBrokers, config.KafkaWriteTimeoutMS)
+	} else {
+		log.Println("kafka publishing disabled (KAFKA_ENABLED=false)")
+	}
+	integrationEventHandler := eventhandlers.NewDeviceIntegrationEventHandler(deviceEventPublisher)
 	deviceDomainService := services.NewDeviceDomainService()
 	externalReferenceService := acl.NewLocalExternalReferenceService()
 
