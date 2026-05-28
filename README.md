@@ -2,86 +2,59 @@
 
 Microservicio Go para SEMS que gestiona dispositivos, vinculaciones, configuraciones y eventos con arquitectura DDD.
 
-## Configuración centralizada
+## Integración local con Gateway + Config Service
 
-Este servicio ahora prioriza configuración remota desde un Config Service vía `CONFIG_SERVICE_URL`.
+Entorno objetivo local:
+- Config Service: `http://localhost:8090`
+- API Gateway: `http://localhost:8081`
+- Microservicio: `http://localhost:8083`
 
-Flujo de carga:
-1. Carga variables locales mínimas (`.env`/entorno).
-2. Consulta `GET {CONFIG_SERVICE_URL}/api/v1/config/{service-name}`.
-3. Fusiona la respuesta remota sobre defaults/fallback locales.
-4. Mantiene secretos solo localmente (por ejemplo `DATABASE_URL`).
+`base_url_local` final:
+- `http://localhost:8083`
 
-Si el Config Service no responde, el servicio usa fallbacks locales para no romper ejecución.
+`route_prefix`:
+- `/api/v1/device-management`
 
-## Variables de entorno locales (mínimas)
+## Variables de entorno locales mínimas
 
 ```env
 PORT=8083
 SERVICE_NAME=device-management-service
-CONFIG_SERVICE_URL=http://localhost:8081
+CONFIG_SERVICE_URL=http://localhost:8090
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DB_NAME?sslmode=require
+API_GATEWAY_ALLOWED_ORIGIN=http://localhost:8081
+CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://localhost:8081
 ```
 
-Notas:
-- `DATABASE_URL` es secreto y no debe publicarse desde Config Service.
-- El resto de configuración compartida (Kafka topics, brokers, CORS, flags de runtime) debe venir del Config Service.
+Sensibles:
+- `DATABASE_URL`
 
-## Contrato esperado del Config Service
+No sensibles:
+- `PORT`
+- `SERVICE_NAME`
+- `CONFIG_SERVICE_URL`
+- `API_GATEWAY_ALLOWED_ORIGIN`
+- `CORS_ALLOWED_ORIGINS`
 
-Endpoint consumido por este microservicio:
+## Configuración remota desde Config Service
+
+Este servicio consulta:
 
 ```http
-GET /api/v1/config/{service-name}
+GET {CONFIG_SERVICE_URL}/api/v1/config/{service-name}
 ```
 
-Campos esperados (JSON):
+Si Config Service no responde, usa fallback local sin romper el arranque.
 
-```json
-{
-  "appEnv": "production",
-  "dbDriver": "postgres",
-  "autoMigrate": false,
-  "kafkaEnabled": true,
-  "kafkaBrokers": ["broker-1:9092"],
-  "kafkaClientId": "device-management-service",
-  "kafkaConsumerGroup": "device-management-group",
-  "kafkaWriteTimeoutMs": 2000,
-  "apiGatewayAllowedOrigin": "https://api.example.com",
-  "corsAllowedOrigins": ["https://api.example.com", "https://web.example.com"],
-  "kafkaTopics": {
-    "deviceRegistered": "device.registered",
-    "deviceStatusUpdated": "device.status.updated",
-    "deviceLinked": "device.linked",
-    "deviceUnlinked": "device.unlinked",
-    "deviceConfigurationUpdated": "device.configuration.updated",
-    "deviceEventRecorded": "device.event.recorded"
-  }
-}
-```
+## Health check
 
-## Ejecución local
-
-```bash
-go mod tidy
-go run .
-```
-
-Base URL local:
-
-```text
-http://localhost:8083/api/v1/device-management
-```
-
-Health:
+Endpoint público sin autenticación:
 
 ```http
 GET /api/v1/device-management/health
 ```
 
-## Endpoints REST (sin cambios)
-
-### Devices
+## Endpoints reales (verificados en código)
 
 ```http
 POST   /api/v1/device-management/devices
@@ -91,56 +64,66 @@ GET    /api/v1/device-management/users/:userId/devices
 PUT    /api/v1/device-management/devices/:deviceId
 PATCH  /api/v1/device-management/devices/:deviceId/status
 DELETE /api/v1/device-management/devices/:deviceId
+POST   /api/v1/device-management/devices/:deviceId/bindings
+GET    /api/v1/device-management/devices/:deviceId/bindings
+GET    /api/v1/device-management/users/:userId/bindings
+PATCH  /api/v1/device-management/bindings/:bindingId/unlink
+POST   /api/v1/device-management/devices/:deviceId/configurations
+GET    /api/v1/device-management/devices/:deviceId/configurations
+PUT    /api/v1/device-management/configurations/:configurationId
+POST   /api/v1/device-management/devices/:deviceId/events
+GET    /api/v1/device-management/devices/:deviceId/events
 ```
 
-### Bindings
+## Auth/JWT
 
-```http
-POST  /api/v1/device-management/devices/:deviceId/bindings
-GET   /api/v1/device-management/devices/:deviceId/bindings
-GET   /api/v1/device-management/users/:userId/bindings
-PATCH /api/v1/device-management/bindings/:bindingId/unlink
-```
+Este microservicio no aplica middleware JWT propio. La autenticación/autorización se delega al API Gateway.
+- Si `API_GATEWAY_AUTH_REQUIRED=false` en Gateway: se puede probar sin token.
+- Endpoint público recomendado siempre: `GET /api/v1/device-management/health`.
 
-### Configurations
+## Dependencias locales
 
-```http
-POST /api/v1/device-management/devices/:deviceId/configurations
-GET  /api/v1/device-management/devices/:deviceId/configurations
-PUT  /api/v1/device-management/configurations/:configurationId
-```
+- PostgreSQL accesible con `DATABASE_URL`.
+- Kafka opcional para publicación de eventos.
 
-### Events
-
-```http
-POST /api/v1/device-management/devices/:deviceId/events
-GET  /api/v1/device-management/devices/:deviceId/events
-```
-
-## Docker
-
+Kafka local (ejemplo):
 ```bash
-docker compose up --build
+docker compose up -d
 ```
 
-## Azure Container Apps (recomendado)
+## Pruebas mínimas
 
-Configurar en Container App:
-- `PORT`
-- `SERVICE_NAME`
-- `CONFIG_SERVICE_URL`
-- `DATABASE_URL` (como secreto)
+Health del microservicio:
+```bash
+curl -i http://localhost:8083/api/v1/device-management/health
+```
 
-Recomendaciones:
-- Inyectar `DATABASE_URL` desde Azure Key Vault o secretos de Container Apps.
-- Exponer Config Service por DNS interno (ingress interno) para llamadas privadas.
-- Versionar configuración en Config Service por entorno (`dev`, `qa`, `prod`).
-- Definir liveness/readiness probe sobre `/api/v1/device-management/health`.
+Endpoint principal del microservicio:
+```bash
+curl -i http://localhost:8083/api/v1/device-management/devices
+```
 
-## Arquitectura
+Endpoint vía Gateway (proxied):
+```bash
+curl -i http://localhost:8081/api/v1/device-management/health
+```
 
-Se mantiene DDD con capas:
-- `device-management/domain`
-- `device-management/application`
-- `device-management/infrastructure`
-- `device-management/interfaces`
+## Registro para Config Service
+
+Objeto listo para `GET/POST` de servicios (sin secretos):
+
+```json
+{
+  "name": "device-management-service",
+  "base_url_local": "http://localhost:8083",
+  "base_url_deploy": "https://device-management-service.<tu-dominio>",
+  "route_prefix": "/api/v1/device-management",
+  "main_endpoints": [
+    "GET /api/v1/device-management/health",
+    "POST /api/v1/device-management/devices",
+    "GET /api/v1/device-management/devices",
+    "PATCH /api/v1/device-management/devices/:deviceId/status",
+    "POST /api/v1/device-management/devices/:deviceId/events"
+  ]
+}
+```

@@ -59,7 +59,7 @@ func LoadAppConfig() AppConfig {
 	return AppConfig{
 		ServiceName:      getEnv("SERVICE_NAME", "device-management-service"),
 		Port:             getEnv("PORT", "8083"),
-		ConfigServiceURL: strings.TrimRight(getEnv("CONFIG_SERVICE_URL", "http://localhost:8081"), "/"),
+		ConfigServiceURL: strings.TrimRight(getEnv("CONFIG_SERVICE_URL", "http://localhost:8090"), "/"),
 		DatabaseURL:      getEnv("DATABASE_URL", ""),
 	}
 }
@@ -100,8 +100,8 @@ func fetchServiceConfig(ctx context.Context, baseURL string, serviceName string)
 }
 
 func defaultRuntimeConfig(serviceName string) RuntimeConfig {
-	apiGatewayOrigin := getEnv("API_GATEWAY_ALLOWED_ORIGIN", "http://localhost:8080")
-	corsAllowedOrigins := splitCSV(getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:4200,http://localhost:5173,http://localhost:8080"))
+	apiGatewayOrigin := getEnv("API_GATEWAY_ALLOWED_ORIGIN", "http://localhost:8081")
+	corsAllowedOrigins := splitCSV(getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173,http://localhost:8081"))
 	corsAllowedOrigins = appendIfMissing(corsAllowedOrigins, apiGatewayOrigin)
 
 	return RuntimeConfig{
