@@ -50,7 +50,7 @@ func (s *DeviceBindingCommandService) CreateBinding(ctx context.Context, command
 	if err := s.bindingRepository.Save(ctx, binding); err != nil {
 		return nil, err
 	}
-	s.eventHandler.Publish(ctx, eventhandlers.TopicDeviceLinked, eventhandlers.EventTypeDeviceLinked, binding.DeviceID, binding.UserID, map[string]interface{}{
+	s.eventHandler.Publish(ctx, s.eventHandler.Topics().DeviceLinked, eventhandlers.EventTypeDeviceLinked, binding.DeviceID, binding.UserID, map[string]interface{}{
 		"bindingId": binding.BindingID,
 		"homeId":    binding.HomeID,
 	})
@@ -68,7 +68,7 @@ func (s *DeviceBindingCommandService) UnlinkBinding(ctx context.Context, command
 	if err := s.bindingRepository.Update(ctx, binding); err != nil {
 		return nil, err
 	}
-	s.eventHandler.Publish(ctx, eventhandlers.TopicDeviceUnlinked, eventhandlers.EventTypeDeviceUnlinked, binding.DeviceID, binding.UserID, map[string]interface{}{
+	s.eventHandler.Publish(ctx, s.eventHandler.Topics().DeviceUnlinked, eventhandlers.EventTypeDeviceUnlinked, binding.DeviceID, binding.UserID, map[string]interface{}{
 		"bindingId":  binding.BindingID,
 		"unlinkedAt": binding.UnlinkedAt,
 	})

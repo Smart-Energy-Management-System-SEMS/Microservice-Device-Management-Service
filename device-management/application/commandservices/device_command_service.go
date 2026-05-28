@@ -46,7 +46,7 @@ func (s *DeviceCommandService) RegisterDevice(ctx context.Context, command comma
 	if err := s.deviceRepository.Save(ctx, device); err != nil {
 		return nil, err
 	}
-	s.eventHandler.Publish(ctx, eventhandlers.TopicDeviceRegistered, eventhandlers.EventTypeDeviceRegistered, device.DeviceID, device.UserID, map[string]interface{}{
+	s.eventHandler.Publish(ctx, s.eventHandler.Topics().DeviceRegistered, eventhandlers.EventTypeDeviceRegistered, device.DeviceID, device.UserID, map[string]interface{}{
 		"externalDeviceCode": device.ExternalDeviceCode,
 		"deviceType":         device.DeviceType,
 		"status":             device.Status,
@@ -88,7 +88,7 @@ func (s *DeviceCommandService) UpdateDeviceStatus(ctx context.Context, command c
 	if err := s.deviceRepository.Update(ctx, device); err != nil {
 		return nil, err
 	}
-	s.eventHandler.Publish(ctx, eventhandlers.TopicDeviceStatusUpdated, eventhandlers.EventTypeDeviceStatusUpdated, device.DeviceID, device.UserID, map[string]interface{}{
+	s.eventHandler.Publish(ctx, s.eventHandler.Topics().DeviceStatusUpdated, eventhandlers.EventTypeDeviceStatusUpdated, device.DeviceID, device.UserID, map[string]interface{}{
 		"previousStatus": previousStatus,
 		"newStatus":      device.Status,
 	})
@@ -106,7 +106,7 @@ func (s *DeviceCommandService) DeleteDevice(ctx context.Context, command command
 	if err := s.deviceRepository.Update(ctx, device); err != nil {
 		return nil, err
 	}
-	s.eventHandler.Publish(ctx, eventhandlers.TopicDeviceStatusUpdated, eventhandlers.EventTypeDeviceStatusUpdated, device.DeviceID, device.UserID, map[string]interface{}{
+	s.eventHandler.Publish(ctx, s.eventHandler.Topics().DeviceStatusUpdated, eventhandlers.EventTypeDeviceStatusUpdated, device.DeviceID, device.UserID, map[string]interface{}{
 		"newStatus": device.Status,
 	})
 	return device, nil

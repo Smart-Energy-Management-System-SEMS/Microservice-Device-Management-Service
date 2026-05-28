@@ -41,7 +41,7 @@ func (s *DeviceConfigurationCommandService) CreateConfiguration(ctx context.Cont
 	if err := s.configurationRepository.Save(ctx, configuration); err != nil {
 		return nil, err
 	}
-	s.eventHandler.Publish(ctx, eventhandlers.TopicDeviceConfigurationUpdated, eventhandlers.EventTypeDeviceConfigurationSaved, configuration.DeviceID, device.UserID, map[string]interface{}{
+	s.eventHandler.Publish(ctx, s.eventHandler.Topics().DeviceConfigurationUpdated, eventhandlers.EventTypeDeviceConfigurationSaved, configuration.DeviceID, device.UserID, map[string]interface{}{
 		"configurationId": configuration.ConfigurationID,
 		"configKey":       configuration.ConfigKey,
 	})
@@ -64,7 +64,7 @@ func (s *DeviceConfigurationCommandService) UpdateConfiguration(ctx context.Cont
 	if err := s.configurationRepository.Update(ctx, configuration); err != nil {
 		return nil, err
 	}
-	s.eventHandler.Publish(ctx, eventhandlers.TopicDeviceConfigurationUpdated, eventhandlers.EventTypeDeviceConfigurationSaved, configuration.DeviceID, device.UserID, map[string]interface{}{
+	s.eventHandler.Publish(ctx, s.eventHandler.Topics().DeviceConfigurationUpdated, eventhandlers.EventTypeDeviceConfigurationSaved, configuration.DeviceID, device.UserID, map[string]interface{}{
 		"configurationId": configuration.ConfigurationID,
 		"configKey":       configuration.ConfigKey,
 	})

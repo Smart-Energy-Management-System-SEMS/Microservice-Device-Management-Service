@@ -6,16 +6,11 @@ import (
 	"time"
 
 	"device-management-service/device-management/application/outboundservices"
+	"device-management-service/device-management/infrastructure/configuration"
 	"github.com/google/uuid"
 )
 
 const (
-	TopicDeviceRegistered             = "device.registered"
-	TopicDeviceStatusUpdated          = "device.status.updated"
-	TopicDeviceLinked                 = "device.linked"
-	TopicDeviceUnlinked               = "device.unlinked"
-	TopicDeviceConfigurationUpdated   = "device.configuration.updated"
-	TopicDeviceEventRecorded          = "device.event.recorded"
 	EventTypeDeviceRegistered         = "DEVICE_REGISTERED"
 	EventTypeDeviceStatusUpdated      = "DEVICE_STATUS_UPDATED"
 	EventTypeDeviceLinked             = "DEVICE_LINKED"
@@ -26,10 +21,11 @@ const (
 
 type DeviceIntegrationEventHandler struct {
 	publisher outboundservices.DeviceEventPublisher
+	topics    configuration.KafkaTopics
 }
 
-func NewDeviceIntegrationEventHandler(publisher outboundservices.DeviceEventPublisher) *DeviceIntegrationEventHandler {
-	return &DeviceIntegrationEventHandler{publisher: publisher}
+func NewDeviceIntegrationEventHandler(publisher outboundservices.DeviceEventPublisher, topics configuration.KafkaTopics) *DeviceIntegrationEventHandler {
+	return &DeviceIntegrationEventHandler{publisher: publisher, topics: topics}
 }
 
 func (h *DeviceIntegrationEventHandler) Publish(ctx context.Context, topic string, eventType string, deviceID uuid.UUID, userID uuid.UUID, payload map[string]interface{}) {
@@ -47,4 +43,11 @@ func (h *DeviceIntegrationEventHandler) Publish(ctx context.Context, topic strin
 	if err := h.publisher.Publish(ctx, topic, event); err != nil {
 		log.Printf("kafka publish failed: %v", err)
 	}
+}
+
+func (h *DeviceIntegrationEventHandler) Topics() configuration.KafkaTopics {
+	if h == nil {
+		return configuration.KafkaTopics{}
+	}
+	return h.topics
 }

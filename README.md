@@ -1,138 +1,85 @@
 # Device Management Service
 
-Microservicio Go para el Smart Energy Management System (SEMS). Gestiona dispositivos, vinculaciones, configuraciones y eventos usando DDD, Gin, GORM, PostgreSQL Neon y Apache Kafka.
+Microservicio Go para SEMS que gestiona dispositivos, vinculaciones, configuraciones y eventos con arquitectura DDD.
 
-## Stack
+## Configuraci髇 centralizada
 
-- Go 1.26
-- Gin REST framework
-- GORM ORM
-- PostgreSQL en Neon mediante `DATABASE_URL`
-- Apache Kafka mediante `github.com/segmentio/kafka-go`
-- Arquitectura DDD con capas `device-management/domain`, `device-management/application`, `device-management/infrastructure` y `device-management/interfaces`
+Este servicio ahora prioriza configuraci髇 remota desde un Config Service v韆 `CONFIG_SERVICE_URL`.
 
-## Variables de entorno
+Flujo de carga:
+1. Carga variables locales m韓imas (`.env`/entorno).
+2. Consulta `GET {CONFIG_SERVICE_URL}/api/v1/config/{service-name}`.
+3. Fusiona la respuesta remota sobre defaults/fallback locales.
+4. Mantiene secretos solo localmente (por ejemplo `DATABASE_URL`).
 
-Copia `.env.example` a `.env` y coloca tu cadena real de Neon. No ejecutes el servicio con el placeholder `USER:PASSWORD@HOST:PORT/DB_NAME`, porque `PORT` debe ser un numero real como `5432`.
+Si el Config Service no responde, el servicio usa fallbacks locales para no romper ejecuci髇.
+
+## Variables de entorno locales (m韓imas)
 
 ```env
 PORT=8083
-APP_ENV=local
-DATABASE_URL=postgresql://neondb_owner:YOUR_PASSWORD@ep-example-123456.us-east-2.aws.neon.tech/neondb?sslmode=require
-DB_DRIVER=postgres
-AUTO_MIGRATE=false
-KEEP_ALIVE_ENABLED=false
-KEEP_ALIVE_INTERVAL_SECONDS=600
-KEEP_ALIVE_PATH=/api/v1/device-management/health
-KAFKA_BROKERS=localhost:9092
-KAFKA_CLIENT_ID=device-management-service
-KAFKA_CONSUMER_GROUP=device-management-group
-KAFKA_ENABLED=false
-KAFKA_WRITE_TIMEOUT_MS=2000
-API_GATEWAY_ALLOWED_ORIGIN=http://localhost:8080
-CORS_ALLOWED_ORIGINS=http://localhost:4200,http://localhost:5173,http://localhost:8080
+SERVICE_NAME=device-management-service
+CONFIG_SERVICE_URL=http://localhost:8081
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DB_NAME?sslmode=require
 ```
 
-## Ejecutar localmente
+Notas:
+- `DATABASE_URL` es secreto y no debe publicarse desde Config Service.
+- El resto de configuraci髇 compartida (Kafka topics, brokers, CORS, flags de runtime) debe venir del Config Service.
+
+## Contrato esperado del Config Service
+
+Endpoint consumido por este microservicio:
+
+```http
+GET /api/v1/config/{service-name}
+```
+
+Campos esperados (JSON):
+
+```json
+{
+  "appEnv": "production",
+  "dbDriver": "postgres",
+  "autoMigrate": false,
+  "kafkaEnabled": true,
+  "kafkaBrokers": ["broker-1:9092"],
+  "kafkaClientId": "device-management-service",
+  "kafkaConsumerGroup": "device-management-group",
+  "kafkaWriteTimeoutMs": 2000,
+  "apiGatewayAllowedOrigin": "https://api.example.com",
+  "corsAllowedOrigins": ["https://api.example.com", "https://web.example.com"],
+  "kafkaTopics": {
+    "deviceRegistered": "device.registered",
+    "deviceStatusUpdated": "device.status.updated",
+    "deviceLinked": "device.linked",
+    "deviceUnlinked": "device.unlinked",
+    "deviceConfigurationUpdated": "device.configuration.updated",
+    "deviceEventRecorded": "device.event.recorded"
+  }
+}
+```
+
+## Ejecuci髇 local
 
 ```bash
 go mod tidy
 go run .
 ```
 
-El servicio arranca por defecto en:
-
-`AUTO_MIGRATE=false` es el valor recomendado cuando Neon ya tiene las tablas creadas. Usa `AUTO_MIGRATE=true` solo para una base vacia donde quieres que GORM cree o ajuste el esquema.
+Base URL local:
 
 ```text
 http://localhost:8083/api/v1/device-management
 ```
 
-Health check:
+Health:
 
 ```http
 GET /api/v1/device-management/health
 ```
 
-## Docker
-
-El proyecto incluye:
-
-```text
-Dockerfile
-.dockerignore
-docker-compose.yml
-```
-
-Construir imagen:
-
-```bash
-docker build -t device-management-service .
-```
-
-Ejecutar contenedor usando tus variables locales:
-
-```bash
-docker run --env-file .env -p 8083:8083 device-management-service
-```
-
-Ejecutar con Docker Compose:
-
-```bash
-docker compose up --build
-```
-
-Health check:
-
-```http
-GET http://localhost:8083/api/v1/device-management/health
-```
-
-Nota: `.env` no se copia dentro de la imagen y esta excluido por `.dockerignore`. Docker Compose lo lee en runtime con `env_file`. Si usas Kafka local instalado en tu maquina, dentro del contenedor `localhost` apunta al contenedor; por eso `docker-compose.yml` usa `host.docker.internal:9092` por defecto mediante `DOCKER_KAFKA_BROKERS`.
-
-## Deploy en Render
-
-El repositorio incluye `render.yaml`, `scripts/render-start.sh`, `scripts/keepalive.sh` y `scripts/keepalive.ps1`.
-
-Build command:
-
-```bash
-go build -o app .
-```
-
-Start command:
-
-```bash
-sh scripts/render-start.sh
-```
-
-Para Render, configura estas variables:
-
-```env
-APP_ENV=production
-PORT=10000
-AUTO_MIGRATE=false
-KEEP_ALIVE_ENABLED=true
-KEEP_ALIVE_INTERVAL_SECONDS=600
-DATABASE_URL=postgresql://...
-```
-
-Render define `RENDER_EXTERNAL_URL` para web services. `render-start.sh` arranca el binario y ejecuta `keepalive.sh` en segundo plano para llamar periodicamente a `/api/v1/device-management/health`.
-
-Para probar el keep-alive manualmente:
-
-```bash
-KEEP_ALIVE_URL=https://tu-servicio.onrender.com sh scripts/keepalive.sh
-```
-
-En Windows PowerShell:
-
-```powershell
-$env:KEEP_ALIVE_URL="https://tu-servicio.onrender.com"
-.\scripts\keepalive.ps1
-```
-
-## Endpoints REST
+## Endpoints REST (sin cambios)
 
 ### Devices
 
@@ -170,134 +117,30 @@ POST /api/v1/device-management/devices/:deviceId/events
 GET  /api/v1/device-management/devices/:deviceId/events
 ```
 
-## Valores permitidos
+## Docker
 
-`connectionProtocol`:
-
-```text
-WIFI, BLUETOOTH
+```bash
+docker compose up --build
 ```
 
-`status`:
+## Azure Container Apps (recomendado)
 
-```text
-ACTIVE, INACTIVE, DISCONNECTED, REMOVED
-```
+Configurar en Container App:
+- `PORT`
+- `SERVICE_NAME`
+- `CONFIG_SERVICE_URL`
+- `DATABASE_URL` (como secreto)
 
-`bindingStatus`:
+Recomendaciones:
+- Inyectar `DATABASE_URL` desde Azure Key Vault o secretos de Container Apps.
+- Exponer Config Service por DNS interno (ingress interno) para llamadas privadas.
+- Versionar configuraci髇 en Config Service por entorno (`dev`, `qa`, `prod`).
+- Definir liveness/readiness probe sobre `/api/v1/device-management/health`.
 
-```text
-LINKED, UNLINKED, PENDING
-```
+## Arquitectura
 
-## Kafka
-
-El servicio publica eventos JSON en estos t贸picos:
-
-```text
-device.registered
-device.status.updated
-device.linked
-device.unlinked
-device.configuration.updated
-device.event.recorded
-```
-
-Si Kafka no esta disponible en local, deja `KAFKA_ENABLED=false` para desactivar la publicacion de eventos sin afectar los endpoints REST.
-
-Formato base:
-
-```json
-{
-  "eventId": "2a28039d-df5b-4a53-8f09-4e1243939d25",
-  "eventType": "DEVICE_REGISTERED",
-  "deviceId": "b9f9a832-4d2a-4a48-95e1-8c14687d16d5",
-  "userId": "0c389ba8-99ca-492b-8b7d-86c5056613f6",
-  "occurredAt": "2026-05-26T22:00:00Z",
-  "payload": {}
-}
-```
-
-## Ejemplos JSON
-
-### Registrar dispositivo
-
-```json
-{
-  "externalDeviceCode": "METER-UPC-001",
-  "userId": "0c389ba8-99ca-492b-8b7d-86c5056613f6",
-  "deviceName": "Smart Meter Sala",
-  "deviceType": "SMART_METER",
-  "brand": "Shelly",
-  "model": "Pro 3EM",
-  "connectionProtocol": "WIFI"
-}
-```
-
-### Actualizar dispositivo
-
-```json
-{
-  "deviceName": "Smart Meter Sala Principal",
-  "deviceType": "SMART_METER",
-  "brand": "Shelly",
-  "model": "Pro 3EM",
-  "connectionProtocol": "WIFI"
-}
-```
-
-### Actualizar estado
-
-```json
-{
-  "status": "DISCONNECTED"
-}
-```
-
-### Vincular dispositivo
-
-```json
-{
-  "userId": "0c389ba8-99ca-492b-8b7d-86c5056613f6",
-  "homeId": "243d53c0-c023-4e15-9d06-8f8fd618e377"
-}
-```
-
-### Crear configuraci贸n
-
-```json
-{
-  "configKey": "sampling_interval_seconds",
-  "configValue": "60"
-}
-```
-
-### Actualizar configuraci贸n
-
-```json
-{
-  "configValue": "30"
-}
-```
-
-### Registrar evento del dispositivo
-
-```json
-{
-  "eventType": "ENERGY_READING_REPORTED",
-  "description": "Lectura de consumo enviada por el medidor",
-  "occurredAt": "2026-05-26T22:00:00Z"
-}
-```
-
-Si `occurredAt` no se env铆a, el dominio asigna autom谩ticamente la fecha actual en UTC.
-
-## Reglas de dominio implementadas
-
-- No se registra un dispositivo sin `externalDeviceCode`, `userId`, `deviceName`, `deviceType` ni `connectionProtocol`.
-- `user_id` y `home_id` se guardan como UUID de referencia externa, sin foreign keys a otros microservicios.
-- No se vincula ni se actualiza configuraci贸n de un dispositivo `REMOVED`.
-- El delete es l贸gico: cambia el estado a `REMOVED`.
-- `REMOVED` es estado final.
-- Al desvincular un binding se marca `UNLINKED` y se llena `unlinkedAt`.
-- Los controllers no contienen l贸gica de negocio; delegan a command/query services.
+Se mantiene DDD con capas:
+- `device-management/domain`
+- `device-management/application`
+- `device-management/infrastructure`
+- `device-management/interfaces`

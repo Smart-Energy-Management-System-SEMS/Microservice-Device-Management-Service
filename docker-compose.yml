@@ -8,12 +8,8 @@ services:
     env_file:
       - .env
     environment:
-      APP_ENV: local
       GIN_MODE: release
-      PORT: 8083
-      AUTO_MIGRATE: false
-      KEEP_ALIVE_ENABLED: false
-      KAFKA_BROKERS: ${DOCKER_KAFKA_BROKERS:-host.docker.internal:9092}
+      PORT: ${PORT:-8083}
     ports:
       - "8083:8083"
     restart: unless-stopped
