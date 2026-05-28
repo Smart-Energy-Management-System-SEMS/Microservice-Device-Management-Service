@@ -27,6 +27,8 @@ KEEP_ALIVE_PATH=/api/v1/device-management/health
 KAFKA_BROKERS=localhost:9092
 KAFKA_CLIENT_ID=device-management-service
 KAFKA_CONSUMER_GROUP=device-management-group
+KAFKA_ENABLED=false
+KAFKA_WRITE_TIMEOUT_MS=2000
 API_GATEWAY_ALLOWED_ORIGIN=http://localhost:8080
 CORS_ALLOWED_ORIGINS=http://localhost:4200,http://localhost:5173,http://localhost:8080
 ```
@@ -200,6 +202,8 @@ device.unlinked
 device.configuration.updated
 device.event.recorded
 ```
+
+Si Kafka no esta disponible en local, deja `KAFKA_ENABLED=false` para desactivar la publicacion de eventos sin afectar los endpoints REST.
 
 Formato base:
 
