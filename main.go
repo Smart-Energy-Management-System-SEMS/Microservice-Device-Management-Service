@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"time"
 
@@ -25,12 +26,13 @@ func main() {
 	}
 
 	config := appconfiguration.LoadAppConfig()
+	runtimeConfig := appconfiguration.ResolveRuntimeConfig(context.Background(), config)
 
 	db, err := gormconfiguration.ConnectDatabase(config.DatabaseURL)
 	if err != nil {
 		log.Fatalf("database connection failed: %v", err)
 	}
-	if config.AutoMigrate {
+	if runtimeConfig.AutoMigrate {
 		if err := gormconfiguration.AutoMigrate(db); err != nil {
 			log.Fatalf("database migration failed: %v", err)
 		}
@@ -44,15 +46,15 @@ func main() {
 	eventRepository := gormrepositories.NewDeviceEventGormRepository(db)
 
 	var deviceEventPublisher outboundservices.DeviceEventPublisher = kafkamessaging.NewNoopPublisher()
-	if config.KafkaEnabled {
-		kafkaProducer := kafkamessaging.NewProducer(config.KafkaBrokers, config.KafkaClientID, time.Duration(config.KafkaWriteTimeoutMS)*time.Millisecond)
+	if runtimeConfig.KafkaEnabled {
+		kafkaProducer := kafkamessaging.NewProducer(runtimeConfig.KafkaBrokers, runtimeConfig.KafkaClientID, time.Duration(runtimeConfig.KafkaWriteTimeoutMS)*time.Millisecond)
 		defer kafkaProducer.Close()
 		deviceEventPublisher = kafkaProducer
-		log.Printf("kafka publishing enabled with brokers=%v timeout_ms=%d", config.KafkaBrokers, config.KafkaWriteTimeoutMS)
+		log.Printf("kafka publishing enabled with brokers=%v timeout_ms=%d", runtimeConfig.KafkaBrokers, runtimeConfig.KafkaWriteTimeoutMS)
 	} else {
 		log.Println("kafka publishing disabled (KAFKA_ENABLED=false)")
 	}
-	integrationEventHandler := eventhandlers.NewDeviceIntegrationEventHandler(deviceEventPublisher)
+	integrationEventHandler := eventhandlers.NewDeviceIntegrationEventHandler(deviceEventPublisher, runtimeConfig.KafkaTopics)
 	deviceDomainService := services.NewDeviceDomainService()
 	externalReferenceService := acl.NewLocalExternalReferenceService()
 
@@ -71,7 +73,7 @@ func main() {
 		BindingController:       controllers.NewBindingController(bindingCommandService, bindingQueryService),
 		ConfigurationController: controllers.NewConfigurationController(configurationCommandService, configurationQueryService),
 		EventController:         controllers.NewEventController(eventCommandService, eventQueryService),
-		CORSAllowedOrigins:      config.CORSAllowedOrigins,
+		CORSAllowedOrigins:      runtimeConfig.CORSAllowedOrigins,
 	})
 
 	log.Printf("device-management-service running on port %s", config.Port)

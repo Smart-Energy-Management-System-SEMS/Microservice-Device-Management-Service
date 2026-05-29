@@ -31,7 +31,7 @@ func (s *DeviceEventCommandService) RecordEvent(ctx context.Context, command com
 	if err := s.eventRepository.Save(ctx, event); err != nil {
 		return nil, err
 	}
-	s.eventHandler.Publish(ctx, eventhandlers.TopicDeviceEventRecorded, eventhandlers.EventTypeDeviceEventRecorded, event.DeviceID, device.UserID, map[string]interface{}{
+	s.eventHandler.Publish(ctx, s.eventHandler.Topics().DeviceEventRecorded, eventhandlers.EventTypeDeviceEventRecorded, event.DeviceID, device.UserID, map[string]interface{}{
 		"eventId":   event.EventID,
 		"eventType": event.EventType,
 	})
