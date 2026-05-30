@@ -26,13 +26,13 @@ COPY --from=builder /out/device-management-service /app/device-management-servic
 
 ENV APP_ENV=production \
     GIN_MODE=release \
-    PORT=8083 \
+    PORT=8080 \
     AUTO_MIGRATE=false
 
-EXPOSE 8083
+EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD curl -fsS "http://localhost:${PORT}/api/v1/device-management/health" || exit 1
+    CMD curl -fsS "http://localhost:${PORT}/api/v1/health" || exit 1
 
 USER appuser
 

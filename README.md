@@ -1,129 +1,129 @@
 # Device Management Service
 
-Microservicio Go para SEMS que gestiona dispositivos, vinculaciones, configuraciones y eventos con arquitectura DDD.
+Microservicio Go de SEMS para gestión de dispositivos con arquitectura DDD.
 
-## Integración local con Gateway + Config Service
+## Health checks
 
-Entorno objetivo local:
-- Config Service: `http://localhost:8090`
-- API Gateway: `http://localhost:8081`
-- Microservicio: `http://localhost:8083`
+- `GET /api/v1/health`
+- `GET /api/v1/device-management/health` (compatibilidad existente)
 
-`base_url_local` final:
-- `http://localhost:8083`
+## Variables requeridas
 
-`route_prefix`:
-- `/api/v1/device-management`
-
-## Variables de entorno locales mínimas
+Usa `.env.example` como base.
 
 ```env
-PORT=8083
+PORT=8080
 SERVICE_NAME=device-management-service
-CONFIG_SERVICE_URL=http://localhost:8090
-DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DB_NAME?sslmode=require
-API_GATEWAY_ALLOWED_ORIGIN=http://localhost:8081
-CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://localhost:8081
+CONFIG_SERVICE_URL=
+DATABASE_URL=
+KAFKA_BROKERS=
+KAFKA_SECURITY_PROTOCOL=
+KAFKA_SASL_MECHANISM=
+KAFKA_USERNAME=
+KAFKA_PASSWORD=
+GIN_MODE=release
 ```
 
-Sensibles:
-- `DATABASE_URL`
+Variables adicionales soportadas:
 
-No sensibles:
-- `PORT`
-- `SERVICE_NAME`
-- `CONFIG_SERVICE_URL`
+- `KAFKA_ENABLED` (default `false`)
+- `KAFKA_CLIENT_ID`
+- `KAFKA_CONSUMER_GROUP`
+- `KAFKA_WRITE_TIMEOUT_MS`
 - `API_GATEWAY_ALLOWED_ORIGIN`
 - `CORS_ALLOWED_ORIGINS`
+- `AUTO_MIGRATE`
 
-## Configuración remota desde Config Service
+## Compatibilidad local
 
-Este servicio consulta:
+Para desarrollo local con Kafka en Docker:
 
-```http
-GET {CONFIG_SERVICE_URL}/api/v1/config/{service-name}
+```env
+KAFKA_BROKERS=localhost:9092
+CONFIG_SERVICE_URL=http://localhost:8090
+PORT=8083
 ```
 
-Si Config Service no responde, usa fallback local sin romper el arranque.
+## Docker build
 
-## Health check
-
-Endpoint público sin autenticación:
-
-```http
-GET /api/v1/device-management/health
+```bash
+docker build -t device-management-service:local .
 ```
 
-## Endpoints reales (verificados en código)
+## Docker run
 
-```http
-POST   /api/v1/device-management/devices
-GET    /api/v1/device-management/devices
-GET    /api/v1/device-management/devices/:deviceId
-GET    /api/v1/device-management/users/:userId/devices
-PUT    /api/v1/device-management/devices/:deviceId
-PATCH  /api/v1/device-management/devices/:deviceId/status
-DELETE /api/v1/device-management/devices/:deviceId
-POST   /api/v1/device-management/devices/:deviceId/bindings
-GET    /api/v1/device-management/devices/:deviceId/bindings
-GET    /api/v1/device-management/users/:userId/bindings
-PATCH  /api/v1/device-management/bindings/:bindingId/unlink
-POST   /api/v1/device-management/devices/:deviceId/configurations
-GET    /api/v1/device-management/devices/:deviceId/configurations
-PUT    /api/v1/device-management/configurations/:configurationId
-POST   /api/v1/device-management/devices/:deviceId/events
-GET    /api/v1/device-management/devices/:deviceId/events
+Ejemplo usando archivo `.env`:
+
+```bash
+docker run --name device-management-service \
+  --env-file .env \
+  -p 8083:8083 \
+  device-management-service:local
 ```
 
-## Auth/JWT
+Si quieres usar `PORT=8080`:
 
-Este microservicio no aplica middleware JWT propio. La autenticación/autorización se delega al API Gateway.
-- Si `API_GATEWAY_AUTH_REQUIRED=false` en Gateway: se puede probar sin token.
-- Endpoint público recomendado siempre: `GET /api/v1/device-management/health`.
+```bash
+docker run --name device-management-service \
+  --env-file .env \
+  -e PORT=8080 \
+  -p 8080:8080 \
+  device-management-service:local
+```
 
-## Dependencias locales
+## Ejemplo local completo
 
-- PostgreSQL accesible con `DATABASE_URL`.
-- Kafka opcional para publicación de eventos.
+1. Levanta Kafka local:
 
-Kafka local (ejemplo):
 ```bash
 docker compose up -d
 ```
 
-## Pruebas mínimas
+2. Configura `.env` con:
 
-Health del microservicio:
+```env
+PORT=8083
+CONFIG_SERVICE_URL=http://localhost:8090
+KAFKA_BROKERS=localhost:9092
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DB_NAME?sslmode=require
+```
+
+3. Ejecuta contenedor:
+
 ```bash
-curl -i http://localhost:8083/api/v1/device-management/health
+docker run --name device-management-service \
+  --env-file .env \
+  -p 8083:8083 \
+  device-management-service:local
 ```
 
-Endpoint principal del microservicio:
+4. Verifica health:
+
 ```bash
-curl -i http://localhost:8083/api/v1/device-management/devices
+curl -i http://localhost:8083/api/v1/health
 ```
 
-Endpoint vía Gateway (proxied):
-```bash
-curl -i http://localhost:8081/api/v1/device-management/health
+## Ejemplo Azure Container Apps
+
+Configura variables en Container App (sin `localhost`):
+
+```text
+PORT=8080
+SERVICE_NAME=device-management-service
+CONFIG_SERVICE_URL=https://<config-service-domain>
+DATABASE_URL=<postgresql-connection-string>
+KAFKA_BROKERS=<broker1:9092,broker2:9092>
+KAFKA_SECURITY_PROTOCOL=SASL_SSL
+KAFKA_SASL_MECHANISM=PLAIN
+KAFKA_USERNAME=<kafka-username>
+KAFKA_PASSWORD=<kafka-password>
+GIN_MODE=release
 ```
 
-## Registro para Config Service
+Mapea el puerto de ingreso de la app a `8080`.
 
-Objeto listo para `GET/POST` de servicios (sin secretos):
+## Endpoints de negocio
 
-```json
-{
-  "name": "device-management-service",
-  "base_url_local": "http://localhost:8083",
-  "base_url_deploy": "https://device-management-service.<tu-dominio>",
-  "route_prefix": "/api/v1/device-management",
-  "main_endpoints": [
-    "GET /api/v1/device-management/health",
-    "POST /api/v1/device-management/devices",
-    "GET /api/v1/device-management/devices",
-    "PATCH /api/v1/device-management/devices/:deviceId/status",
-    "POST /api/v1/device-management/devices/:deviceId/events"
-  ]
-}
-```
+Se mantienen sin cambios bajo el prefijo:
+
+- `/api/v1/device-management`

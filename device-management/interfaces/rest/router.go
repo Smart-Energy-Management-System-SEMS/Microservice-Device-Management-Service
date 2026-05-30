@@ -19,6 +19,9 @@ func NewRouter(dependencies RouterDependencies) *gin.Engine {
 	router.Use(gin.Logger(), gin.Recovery())
 	router.Use(httpinfrastructure.CORSMiddleware(dependencies.CORSAllowedOrigins))
 
+	health := router.Group("/api/v1")
+	health.GET("/health", controllers.Health)
+
 	api := router.Group("/api/v1/device-management")
 	api.GET("/health", controllers.Health)
 

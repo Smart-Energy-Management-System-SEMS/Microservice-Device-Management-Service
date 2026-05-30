@@ -1,16 +1,28 @@
 .git
 .gitignore
 .idea
+.vscode
 
 .env
 .env.*
 !.env.example
 
-.gocache*
-app
-*.exe
 *.log
+*.tmp
+*.swp
 
-Dockerfile
-docker-compose.yml
+bin/
+dist/
+build/
+coverage/
+
+*.exe
+*.dll
+*.so
+*.dylib
+
+.gocache*
+
+docker-compose*.yml
+README.md
 Microservice-Devices-Management-Service.iml
