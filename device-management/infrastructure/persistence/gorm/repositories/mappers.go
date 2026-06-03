@@ -7,6 +7,19 @@ import (
 	persistencemodel "device-management-service/device-management/infrastructure/persistence/gorm/model"
 )
 
+// This file holds the "mappers": small functions that translate between the two
+// worlds the repository lives in. We deliberately keep TWO separate shapes for
+// the same data:
+//   - domain objects (aggregates/entities): rich, with behaviour and value
+//     objects, and unaware of any database.
+//   - persistence models: plain structs with GORM tags, shaped for SQL columns.
+// Keeping them apart means the database schema can change without forcing the
+// domain to change, and vice versa. Each concept therefore has a pair of
+// functions: toXModel (domain -> DB) and toXDomain (DB -> domain).
+
+// toDeviceModel converts a domain Device into the row struct GORM persists.
+// Note how value objects are cast back to plain strings (e.g. string(status))
+// because the database column is just text.
 func toDeviceModel(device *aggregates.Device) persistencemodel.DeviceModel {
 	return persistencemodel.DeviceModel{
 		DeviceID:           device.DeviceID,
@@ -23,6 +36,10 @@ func toDeviceModel(device *aggregates.Device) persistencemodel.DeviceModel {
 	}
 }
 
+// toDeviceDomain does the reverse: it rebuilds a domain Device from a DB row.
+// It goes through RehydrateDevice (not RegisterDevice) on purpose, because the
+// stored data is already valid and should be reconstructed as-is. The plain
+// strings from the DB are wrapped back into their value object types.
 func toDeviceDomain(device persistencemodel.DeviceModel) *aggregates.Device {
 	return aggregates.RehydrateDevice(
 		device.DeviceID,
@@ -39,6 +56,12 @@ func toDeviceDomain(device persistencemodel.DeviceModel) *aggregates.Device {
 	)
 }
 
+// The remaining functions repeat the same domain<->DB mapping pattern for the
+// other concepts in the bounded context: bindings, configurations and events.
+// They are intentionally repetitive and boring — that predictability makes the
+// data flow easy to follow and to test.
+
+// toBindingModel maps a domain DeviceBinding to its persistence model.
 func toBindingModel(binding *entities.DeviceBinding) persistencemodel.DeviceBindingModel {
 	return persistencemodel.DeviceBindingModel{
 		BindingID:     binding.BindingID,
