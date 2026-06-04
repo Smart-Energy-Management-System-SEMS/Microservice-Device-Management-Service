@@ -47,6 +47,9 @@ func main() {
 
 	var deviceEventPublisher outboundservices.DeviceEventPublisher = kafkamessaging.NewNoopPublisher()
 	if runtimeConfig.KafkaEnabled {
+		if err := kafkamessaging.EnsureTopics(context.Background(), runtimeConfig.KafkaBrokers, runtimeConfig.KafkaTopics); err != nil {
+			log.Printf("kafka topic bootstrap failed: %v", err)
+		}
 		kafkaProducer := kafkamessaging.NewProducer(runtimeConfig.KafkaBrokers, runtimeConfig.KafkaClientID, time.Duration(runtimeConfig.KafkaWriteTimeoutMS)*time.Millisecond)
 		defer kafkaProducer.Close()
 		deviceEventPublisher = kafkaProducer
