@@ -33,6 +33,10 @@ type RuntimeConfig struct {
 	AutoMigrate             bool
 	KafkaEnabled            bool
 	KafkaBrokers            []string
+	KafkaSecurityProtocol   string
+	KafkaSASLMechanism      string
+	KafkaUsername           string
+	KafkaPassword           string
 	KafkaClientID           string
 	KafkaConsumerGroup      string
 	KafkaWriteTimeoutMS     int
@@ -63,6 +67,10 @@ type serviceConfigResponse struct {
 	AutoMigrate             *bool       `json:"autoMigrate"`
 	KafkaEnabled            *bool       `json:"kafkaEnabled"`
 	KafkaBrokers            []string    `json:"kafkaBrokers"`
+	KafkaSecurityProtocol   string      `json:"kafkaSecurityProtocol"`
+	KafkaSASLMechanism      string      `json:"kafkaSaslMechanism"`
+	KafkaUsername           string      `json:"kafkaUsername"`
+	KafkaPassword           string      `json:"kafkaPassword"`
 	KafkaClientID           string      `json:"kafkaClientId"`
 	KafkaConsumerGroup      string      `json:"kafkaConsumerGroup"`
 	KafkaWriteTimeoutMS     int         `json:"kafkaWriteTimeoutMs"`
@@ -133,7 +141,7 @@ func fetchServiceConfig(ctx context.Context, baseURL string, serviceName string)
 // is unreachable, and also the base that remote values are merged on top of.
 func defaultRuntimeConfig(serviceName string) RuntimeConfig {
 	apiGatewayOrigin := getEnv("API_GATEWAY_ALLOWED_ORIGIN", "http://localhost:8081")
-	corsAllowedOrigins := splitCSV(getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173,http://localhost:8081"))
+	corsAllowedOrigins := loadAllowedOrigins("http://localhost:3000,http://localhost:5173,http://localhost:8081")
 	corsAllowedOrigins = appendIfMissing(corsAllowedOrigins, apiGatewayOrigin)
 
 	return RuntimeConfig{
@@ -142,6 +150,10 @@ func defaultRuntimeConfig(serviceName string) RuntimeConfig {
 		AutoMigrate:             getBoolEnv("AUTO_MIGRATE", false),
 		KafkaEnabled:            getBoolEnv("KAFKA_ENABLED", false),
 		KafkaBrokers:            splitCSV(getEnv("KAFKA_BROKERS", "localhost:9092")),
+		KafkaSecurityProtocol:   getEnv("KAFKA_SECURITY_PROTOCOL", ""),
+		KafkaSASLMechanism:      getEnv("KAFKA_SASL_MECHANISM", ""),
+		KafkaUsername:           getEnv("KAFKA_USERNAME", ""),
+		KafkaPassword:           getEnv("KAFKA_PASSWORD", ""),
 		KafkaClientID:           getEnv("KAFKA_CLIENT_ID", serviceName),
 		KafkaConsumerGroup:      getEnv("KAFKA_CONSUMER_GROUP", "device-management-group"),
 		KafkaWriteTimeoutMS:     getIntEnv("KAFKA_WRITE_TIMEOUT_MS", 2000),
@@ -181,6 +193,18 @@ func mergeRuntimeConfig(base RuntimeConfig, remote *serviceConfigResponse) Runti
 	}
 	if len(remote.KafkaBrokers) > 0 {
 		base.KafkaBrokers = remote.KafkaBrokers
+	}
+	if strings.TrimSpace(remote.KafkaSecurityProtocol) != "" {
+		base.KafkaSecurityProtocol = strings.TrimSpace(remote.KafkaSecurityProtocol)
+	}
+	if strings.TrimSpace(remote.KafkaSASLMechanism) != "" {
+		base.KafkaSASLMechanism = strings.TrimSpace(remote.KafkaSASLMechanism)
+	}
+	if strings.TrimSpace(remote.KafkaUsername) != "" {
+		base.KafkaUsername = strings.TrimSpace(remote.KafkaUsername)
+	}
+	if strings.TrimSpace(remote.KafkaPassword) != "" {
+		base.KafkaPassword = strings.TrimSpace(remote.KafkaPassword)
 	}
 	if strings.TrimSpace(remote.KafkaClientID) != "" {
 		base.KafkaClientID = strings.TrimSpace(remote.KafkaClientID)
@@ -271,6 +295,17 @@ func splitCSV(value string) []string {
 		}
 	}
 	return result
+}
+
+func loadAllowedOrigins(fallback string) []string {
+	value := strings.TrimSpace(os.Getenv("CORS_ALLOWED_ORIGINS"))
+	if value == "" {
+		value = strings.TrimSpace(os.Getenv("ALLOWED_ORIGINS"))
+	}
+	if value == "" {
+		value = fallback
+	}
+	return splitCSV(value)
 }
 
 // appendIfMissing adds a value to a slice only if it is not already there,

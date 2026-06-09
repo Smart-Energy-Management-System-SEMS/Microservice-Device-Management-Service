@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"log"
-	"time"
 
 	"device-management-service/device-management/application/commandservices"
 	"device-management-service/device-management/application/eventhandlers"
@@ -47,10 +46,14 @@ func main() {
 
 	var deviceEventPublisher outboundservices.DeviceEventPublisher = kafkamessaging.NewNoopPublisher()
 	if runtimeConfig.KafkaEnabled {
-		if err := kafkamessaging.EnsureTopics(context.Background(), runtimeConfig.KafkaBrokers, runtimeConfig.KafkaTopics); err != nil {
+		kafkaOptions := kafkamessaging.NewConnectionOptions(runtimeConfig)
+		if err := kafkamessaging.EnsureTopics(context.Background(), kafkaOptions, runtimeConfig.KafkaTopics); err != nil {
 			log.Printf("kafka topic bootstrap failed: %v", err)
 		}
-		kafkaProducer := kafkamessaging.NewProducer(runtimeConfig.KafkaBrokers, runtimeConfig.KafkaClientID, time.Duration(runtimeConfig.KafkaWriteTimeoutMS)*time.Millisecond)
+		kafkaProducer, err := kafkamessaging.NewProducer(kafkaOptions)
+		if err != nil {
+			log.Fatalf("kafka producer configuration failed: %v", err)
+		}
 		defer kafkaProducer.Close()
 		deviceEventPublisher = kafkaProducer
 		log.Printf("kafka publishing enabled with brokers=%v timeout_ms=%d", runtimeConfig.KafkaBrokers, runtimeConfig.KafkaWriteTimeoutMS)

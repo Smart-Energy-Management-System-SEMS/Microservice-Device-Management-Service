@@ -15,13 +15,18 @@ import (
 // EnsureTopics makes sure the service topics exist before the application
 // starts publishing events. Missing topics are created once; existing topics
 // are left untouched.
-func EnsureTopics(ctx context.Context, brokers []string, topics configuration.KafkaTopics) error {
-	broker := firstBroker(brokers)
+func EnsureTopics(ctx context.Context, options ConnectionOptions, topics configuration.KafkaTopics) error {
+	broker := firstBroker(options.Brokers)
 	if broker == "" {
 		return fmt.Errorf("no kafka brokers configured")
 	}
 
-	conn, err := kafkago.DialContext(ctx, "tcp", broker)
+	dialer, err := options.Dialer()
+	if err != nil {
+		return err
+	}
+
+	conn, err := dialer.DialContext(ctx, "tcp", broker)
 	if err != nil {
 		return fmt.Errorf("dial broker %s: %w", broker, err)
 	}
@@ -57,7 +62,7 @@ func EnsureTopics(ctx context.Context, brokers []string, topics configuration.Ka
 	}
 
 	controllerAddress := net.JoinHostPort(controller.Host, strconv.Itoa(controller.Port))
-	controllerConn, err := kafkago.DialContext(ctx, "tcp", controllerAddress)
+	controllerConn, err := dialer.DialContext(ctx, "tcp", controllerAddress)
 	if err != nil {
 		return fmt.Errorf("dial controller %s: %w", controllerAddress, err)
 	}

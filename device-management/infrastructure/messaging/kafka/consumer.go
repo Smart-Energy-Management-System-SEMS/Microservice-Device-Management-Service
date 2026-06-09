@@ -14,15 +14,20 @@ type Consumer struct {
 	handler MessageHandler
 }
 
-func NewConsumer(brokers []string, groupID string, topic string, handler MessageHandler) *Consumer {
+func NewConsumer(options ConnectionOptions, topic string, handler MessageHandler) (*Consumer, error) {
+	dialer, err := options.Dialer()
+	if err != nil {
+		return nil, err
+	}
 	return &Consumer{
 		reader: kafka.NewReader(kafka.ReaderConfig{
-			Brokers: brokers,
-			GroupID: groupID,
+			Brokers: options.Brokers,
+			GroupID: options.ConsumerGroup,
 			Topic:   topic,
+			Dialer:  dialer,
 		}),
 		handler: handler,
-	}
+	}, nil
 }
 
 func (c *Consumer) Start(ctx context.Context) {

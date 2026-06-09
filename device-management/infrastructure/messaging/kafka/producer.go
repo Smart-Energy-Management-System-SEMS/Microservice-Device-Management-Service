@@ -19,22 +19,29 @@ import (
 // service handles many requests at the same time (concurrently), the map is
 // protected by a mutex to avoid two goroutines corrupting it at once.
 type Producer struct {
-	brokers      []string                 // addresses of the Kafka brokers
-	clientID     string                   // identifies this service to Kafka
-	writeTimeout time.Duration            // max time allowed for a single write
+	brokers      []string      // addresses of the Kafka brokers
+	clientID     string        // identifies this service to Kafka
+	writeTimeout time.Duration // max time allowed for a single write
+	transport    *kafka.Transport
 	writersMu    sync.Mutex               // guards the writers map below
 	writers      map[string]*kafka.Writer // one cached writer per topic
 }
 
 // NewProducer creates a Producer with an empty writer cache. The map MUST be
 // initialised with make here; writing to a nil map would panic at runtime.
-func NewProducer(brokers []string, clientID string, writeTimeout time.Duration) *Producer {
-	return &Producer{
-		brokers:      brokers,
-		clientID:     clientID,
-		writeTimeout: writeTimeout,
-		writers:      make(map[string]*kafka.Writer),
+func NewProducer(options ConnectionOptions) (*Producer, error) {
+	transport, err := options.Transport()
+	if err != nil {
+		return nil, err
 	}
+
+	return &Producer{
+		brokers:      options.Brokers,
+		clientID:     options.ClientID,
+		writeTimeout: options.WriteTimeout,
+		transport:    transport,
+		writers:      make(map[string]*kafka.Writer),
+	}, nil
 }
 
 // Publish implements the DeviceEventPublisher interface. It converts the event
@@ -108,6 +115,7 @@ func (p *Producer) writerForTopic(topic string) *kafka.Writer {
 		Balancer:     &kafka.LeastBytes{},
 		BatchTimeout: 10 * time.Millisecond,
 	})
+	writer.Transport = p.transport
 	p.writers[topic] = writer
 	return writer
 }
