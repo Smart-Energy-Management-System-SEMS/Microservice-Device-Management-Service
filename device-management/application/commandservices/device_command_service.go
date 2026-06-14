@@ -24,9 +24,9 @@ import (
 // concrete types. This is "dependency injection": the service depends on
 // abstractions, so we can swap a real database for a fake one in tests.
 type DeviceCommandService struct {
-	deviceRepository repositories.DeviceRepository                 // saves/loads devices
-	referenceService acl.ExternalReferenceService                  // validates data owned by other services
-	eventHandler     *eventhandlers.DeviceIntegrationEventHandler  // publishes events to Kafka
+	deviceRepository repositories.DeviceRepository                // saves/loads devices
+	referenceService acl.ExternalReferenceService                 // validates data owned by other services
+	eventHandler     *eventhandlers.DeviceIntegrationEventHandler // publishes events to Kafka
 }
 
 // NewDeviceCommandService is the constructor. The dependencies are passed in
@@ -79,7 +79,7 @@ func (s *DeviceCommandService) RegisterDevice(ctx context.Context, command comma
 	// Step 6: announce what happened by publishing an integration event so other
 	// microservices can react. This is "fire and forget": a failure to publish
 	// is logged inside the handler but does not roll back the save.
-	s.eventHandler.Publish(ctx, s.eventHandler.Topics().DeviceRegistered, eventhandlers.EventTypeDeviceRegistered, device.DeviceID, device.UserID, map[string]interface{}{
+	s.eventHandler.Publish(ctx, s.eventHandler.Topics().DeviceEvents, eventhandlers.EventTypeDeviceRegistered, device.DeviceID, device.UserID, map[string]interface{}{
 		"externalDeviceCode": device.ExternalDeviceCode,
 		"deviceType":         device.DeviceType,
 		"status":             device.Status,
@@ -127,7 +127,7 @@ func (s *DeviceCommandService) UpdateDeviceStatus(ctx context.Context, command c
 	if err := s.deviceRepository.Update(ctx, device); err != nil {
 		return nil, err
 	}
-	s.eventHandler.Publish(ctx, s.eventHandler.Topics().DeviceStatusUpdated, eventhandlers.EventTypeDeviceStatusUpdated, device.DeviceID, device.UserID, map[string]interface{}{
+	s.eventHandler.Publish(ctx, s.eventHandler.Topics().DeviceEvents, eventhandlers.EventTypeDeviceStatusUpdated, device.DeviceID, device.UserID, map[string]interface{}{
 		"previousStatus": previousStatus,
 		"newStatus":      device.Status,
 	})
@@ -148,7 +148,7 @@ func (s *DeviceCommandService) DeleteDevice(ctx context.Context, command command
 	if err := s.deviceRepository.Update(ctx, device); err != nil {
 		return nil, err
 	}
-	s.eventHandler.Publish(ctx, s.eventHandler.Topics().DeviceStatusUpdated, eventhandlers.EventTypeDeviceStatusUpdated, device.DeviceID, device.UserID, map[string]interface{}{
+	s.eventHandler.Publish(ctx, s.eventHandler.Topics().DeviceEvents, eventhandlers.EventTypeDeviceStatusUpdated, device.DeviceID, device.UserID, map[string]interface{}{
 		"newStatus": device.Status,
 	})
 	return device, nil

@@ -20,12 +20,12 @@ import (
 // Consumers read this field to decide how to react, so the exact strings are
 // part of our contract with other services and must not change carelessly.
 const (
-	EventTypeDeviceRegistered         = "DEVICE_REGISTERED"
-	EventTypeDeviceStatusUpdated      = "DEVICE_STATUS_UPDATED"
-	EventTypeDeviceLinked             = "DEVICE_LINKED"
-	EventTypeDeviceUnlinked           = "DEVICE_UNLINKED"
-	EventTypeDeviceConfigurationSaved = "DEVICE_CONFIGURATION_UPDATED"
-	EventTypeDeviceEventRecorded      = "DEVICE_EVENT_RECORDED"
+	EventTypeDeviceRegistered         = "device.registered"
+	EventTypeDeviceStatusUpdated      = "device.status.updated"
+	EventTypeDeviceLinked             = "device.linked"
+	EventTypeDeviceUnlinked           = "device.unlinked"
+	EventTypeDeviceConfigurationSaved = "device.configuration.updated"
+	EventTypeDeviceEventRecorded      = "device.event.recorded"
 )
 
 // DeviceIntegrationEventHandler depends on a publisher interface (so the actual

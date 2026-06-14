@@ -32,6 +32,7 @@ type RuntimeConfig struct {
 	DBDriver                string
 	AutoMigrate             bool
 	KafkaEnabled            bool
+	KafkaAutoCreateTopics   bool
 	KafkaBrokers            []string
 	KafkaSecurityProtocol   string
 	KafkaSASLMechanism      string
@@ -49,12 +50,8 @@ type RuntimeConfig struct {
 // in config (instead of hard-coding the strings) lets each environment use its
 // own topic names without recompiling.
 type KafkaTopics struct {
-	DeviceRegistered           string
-	DeviceStatusUpdated        string
-	DeviceLinked               string
-	DeviceUnlinked             string
-	DeviceConfigurationUpdated string
-	DeviceEventRecorded        string
+	DeviceEvents string `json:"deviceEvents"`
+	IAMEvents    string `json:"iamEvents"`
 }
 
 // serviceConfigResponse mirrors the JSON returned by the central config
@@ -66,6 +63,7 @@ type serviceConfigResponse struct {
 	DBDriver                string      `json:"dbDriver"`
 	AutoMigrate             *bool       `json:"autoMigrate"`
 	KafkaEnabled            *bool       `json:"kafkaEnabled"`
+	KafkaAutoCreateTopics   *bool       `json:"kafkaAutoCreateTopics"`
 	KafkaBrokers            []string    `json:"kafkaBrokers"`
 	KafkaSecurityProtocol   string      `json:"kafkaSecurityProtocol"`
 	KafkaSASLMechanism      string      `json:"kafkaSaslMechanism"`
@@ -85,7 +83,7 @@ func LoadAppConfig() AppConfig {
 	return AppConfig{
 		ServiceName:      getEnv("SERVICE_NAME", "device-management-service"),
 		Port:             getEnv("PORT", "8083"),
-		ConfigServiceURL: strings.TrimRight(getEnv("CONFIG_SERVICE_URL", "http://localhost:8090"), "/"),
+		ConfigServiceURL: strings.TrimRight(getEnv("CONFIG_SERVICE_URL", ""), "/"),
 		DatabaseURL:      getEnv("DATABASE_URL", ""),
 	}
 }
@@ -140,8 +138,8 @@ func fetchServiceConfig(ctx context.Context, baseURL string, serviceName string)
 // and hard-coded defaults. This is what we use when the central config service
 // is unreachable, and also the base that remote values are merged on top of.
 func defaultRuntimeConfig(serviceName string) RuntimeConfig {
-	apiGatewayOrigin := getEnv("API_GATEWAY_ALLOWED_ORIGIN", "http://localhost:8081")
-	corsAllowedOrigins := loadAllowedOrigins("http://localhost:3000,http://localhost:5173,http://localhost:8081")
+	apiGatewayOrigin := getEnv("API_GATEWAY_ALLOWED_ORIGIN", "")
+	corsAllowedOrigins := loadAllowedOrigins("")
 	corsAllowedOrigins = appendIfMissing(corsAllowedOrigins, apiGatewayOrigin)
 
 	return RuntimeConfig{
@@ -149,7 +147,8 @@ func defaultRuntimeConfig(serviceName string) RuntimeConfig {
 		DBDriver:                getEnv("DB_DRIVER", "postgres"),
 		AutoMigrate:             getBoolEnv("AUTO_MIGRATE", false),
 		KafkaEnabled:            getBoolEnv("KAFKA_ENABLED", false),
-		KafkaBrokers:            splitCSV(getEnv("KAFKA_BROKERS", "localhost:9092")),
+		KafkaAutoCreateTopics:   getBoolEnv("KAFKA_AUTO_CREATE_TOPICS", false),
+		KafkaBrokers:            splitCSV(getEnv("KAFKA_BROKERS", "")),
 		KafkaSecurityProtocol:   getEnv("KAFKA_SECURITY_PROTOCOL", ""),
 		KafkaSASLMechanism:      getEnv("KAFKA_SASL_MECHANISM", ""),
 		KafkaUsername:           getEnv("KAFKA_USERNAME", ""),
@@ -160,12 +159,17 @@ func defaultRuntimeConfig(serviceName string) RuntimeConfig {
 		APIGatewayAllowedOrigin: apiGatewayOrigin,
 		CORSAllowedOrigins:      corsAllowedOrigins,
 		KafkaTopics: KafkaTopics{
-			DeviceRegistered:           getEnv("TOPIC_DEVICE_REGISTERED", "device.registered"),
-			DeviceStatusUpdated:        getEnv("TOPIC_DEVICE_STATUS_UPDATED", "device.status.updated"),
-			DeviceLinked:               getEnv("TOPIC_DEVICE_LINKED", "device.linked"),
-			DeviceUnlinked:             getEnv("TOPIC_DEVICE_UNLINKED", "device.unlinked"),
-			DeviceConfigurationUpdated: getEnv("TOPIC_DEVICE_CONFIGURATION_UPDATED", "device.configuration.updated"),
-			DeviceEventRecorded:        getEnv("TOPIC_DEVICE_EVENT_RECORDED", "device.event.recorded"),
+			DeviceEvents: firstNonEmpty(
+				getEnv("TOPIC_DEVICE_EVENTS", ""),
+				getEnv("TOPIC_DEVICE_REGISTERED", ""),
+				getEnv("TOPIC_DEVICE_STATUS_UPDATED", ""),
+				getEnv("TOPIC_DEVICE_LINKED", ""),
+				getEnv("TOPIC_DEVICE_UNLINKED", ""),
+				getEnv("TOPIC_DEVICE_CONFIGURATION_UPDATED", ""),
+				getEnv("TOPIC_DEVICE_EVENT_RECORDED", ""),
+				"device.events",
+			),
+			IAMEvents: getEnv("TOPIC_IAM_EVENTS", "iam.events"),
 		},
 	}
 }
@@ -190,6 +194,9 @@ func mergeRuntimeConfig(base RuntimeConfig, remote *serviceConfigResponse) Runti
 	}
 	if remote.KafkaEnabled != nil {
 		base.KafkaEnabled = *remote.KafkaEnabled
+	}
+	if remote.KafkaAutoCreateTopics != nil {
+		base.KafkaAutoCreateTopics = *remote.KafkaAutoCreateTopics
 	}
 	if len(remote.KafkaBrokers) > 0 {
 		base.KafkaBrokers = remote.KafkaBrokers
@@ -223,23 +230,11 @@ func mergeRuntimeConfig(base RuntimeConfig, remote *serviceConfigResponse) Runti
 	}
 	base.CORSAllowedOrigins = appendIfMissing(base.CORSAllowedOrigins, base.APIGatewayAllowedOrigin)
 
-	if strings.TrimSpace(remote.KafkaTopics.DeviceRegistered) != "" {
-		base.KafkaTopics.DeviceRegistered = strings.TrimSpace(remote.KafkaTopics.DeviceRegistered)
+	if strings.TrimSpace(remote.KafkaTopics.DeviceEvents) != "" {
+		base.KafkaTopics.DeviceEvents = strings.TrimSpace(remote.KafkaTopics.DeviceEvents)
 	}
-	if strings.TrimSpace(remote.KafkaTopics.DeviceStatusUpdated) != "" {
-		base.KafkaTopics.DeviceStatusUpdated = strings.TrimSpace(remote.KafkaTopics.DeviceStatusUpdated)
-	}
-	if strings.TrimSpace(remote.KafkaTopics.DeviceLinked) != "" {
-		base.KafkaTopics.DeviceLinked = strings.TrimSpace(remote.KafkaTopics.DeviceLinked)
-	}
-	if strings.TrimSpace(remote.KafkaTopics.DeviceUnlinked) != "" {
-		base.KafkaTopics.DeviceUnlinked = strings.TrimSpace(remote.KafkaTopics.DeviceUnlinked)
-	}
-	if strings.TrimSpace(remote.KafkaTopics.DeviceConfigurationUpdated) != "" {
-		base.KafkaTopics.DeviceConfigurationUpdated = strings.TrimSpace(remote.KafkaTopics.DeviceConfigurationUpdated)
-	}
-	if strings.TrimSpace(remote.KafkaTopics.DeviceEventRecorded) != "" {
-		base.KafkaTopics.DeviceEventRecorded = strings.TrimSpace(remote.KafkaTopics.DeviceEventRecorded)
+	if strings.TrimSpace(remote.KafkaTopics.IAMEvents) != "" {
+		base.KafkaTopics.IAMEvents = strings.TrimSpace(remote.KafkaTopics.IAMEvents)
 	}
 
 	return base
@@ -321,4 +316,13 @@ func appendIfMissing(values []string, value string) []string {
 		return values
 	}
 	return append(values, value)
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
 }

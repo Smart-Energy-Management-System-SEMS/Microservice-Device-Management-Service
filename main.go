@@ -47,8 +47,12 @@ func main() {
 	var deviceEventPublisher outboundservices.DeviceEventPublisher = kafkamessaging.NewNoopPublisher()
 	if runtimeConfig.KafkaEnabled {
 		kafkaOptions := kafkamessaging.NewConnectionOptions(runtimeConfig)
-		if err := kafkamessaging.EnsureTopics(context.Background(), kafkaOptions, runtimeConfig.KafkaTopics); err != nil {
-			log.Printf("kafka topic bootstrap failed: %v", err)
+		if runtimeConfig.KafkaAutoCreateTopics {
+			if err := kafkamessaging.EnsureTopics(context.Background(), kafkaOptions, runtimeConfig.KafkaTopics); err != nil {
+				log.Printf("kafka topic bootstrap failed: %v", err)
+			}
+		} else {
+			log.Println("kafka topic bootstrap skipped (KAFKA_AUTO_CREATE_TOPICS=false)")
 		}
 		kafkaProducer, err := kafkamessaging.NewProducer(kafkaOptions)
 		if err != nil {

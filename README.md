@@ -1,6 +1,6 @@
 # Device Management Service
 
-Microservicio Go de SEMS para gestión de dispositivos con arquitectura DDD.
+Microservicio Go de SEMS para gestion de dispositivos con arquitectura DDD.
 
 ## Health checks
 
@@ -21,28 +21,53 @@ KAFKA_SECURITY_PROTOCOL=
 KAFKA_SASL_MECHANISM=
 KAFKA_USERNAME=
 KAFKA_PASSWORD=
+TOPIC_DEVICE_EVENTS=device.events
 GIN_MODE=release
 ```
 
 Variables adicionales soportadas:
 
 - `KAFKA_ENABLED` (default `false`)
+- `KAFKA_AUTO_CREATE_TOPICS` (default `false`, recomendado `false` para Azure Event Hubs)
 - `KAFKA_CLIENT_ID`
 - `KAFKA_CONSUMER_GROUP`
 - `KAFKA_WRITE_TIMEOUT_MS`
+- `TOPIC_IAM_EVENTS`
 - `API_GATEWAY_ALLOWED_ORIGIN`
 - `CORS_ALLOWED_ORIGINS`
 - `AUTO_MIGRATE`
 
-## Compatibilidad local
+## Kafka por dominio
 
-Para desarrollo local con Kafka en Docker:
+Este microservicio publica todos los eventos del dominio Device en un solo topic fisico:
 
-```env
-KAFKA_BROKERS=localhost:9092
-CONFIG_SERVICE_URL=http://localhost:8090
-PORT=8083
+- `device.events`
+
+El tipo real del evento viaja en el payload JSON bajo `eventType`, por ejemplo:
+
+```json
+{
+  "eventId": "0a3ab694-8382-43f0-847e-8c1ae87fce75",
+  "eventType": "device.registered",
+  "deviceId": "9ccfa2e6-52a8-4cc3-98af-1d2fc46ba0d8",
+  "userId": "9f4f7aef-b4ae-4284-a28c-a2dc2dfe4a93",
+  "occurredAt": "2026-06-12T22:30:00Z",
+  "payload": {
+    "externalDeviceCode": "MED-001",
+    "deviceType": "meter",
+    "status": "ACTIVE"
+  }
+}
 ```
+
+Eventos publicados por este micro:
+
+- `device.registered`
+- `device.linked`
+- `device.unlinked`
+- `device.status.updated`
+- `device.configuration.updated`
+- `device.event.recorded`
 
 ## Docker build
 
@@ -73,7 +98,7 @@ docker run --name device-management-service \
 
 ## Ejemplo local completo
 
-1. Levanta Kafka local:
+1. Levanta la infraestructura:
 
 ```bash
 docker compose up -d
@@ -83,8 +108,11 @@ docker compose up -d
 
 ```env
 PORT=8083
-CONFIG_SERVICE_URL=http://localhost:8090
-KAFKA_BROKERS=localhost:9092
+CONFIG_SERVICE_URL=http://config-service:8090
+KAFKA_BROKERS=kafka:9092
+KAFKA_ENABLED=true
+KAFKA_AUTO_CREATE_TOPICS=true
+TOPIC_DEVICE_EVENTS=device.events
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DB_NAME?sslmode=require
 ```
 
@@ -100,27 +128,33 @@ docker run --name device-management-service \
 4. Verifica health:
 
 ```bash
-curl -i http://localhost:8083/api/v1/health
+curl -i http://127.0.0.1:8083/api/v1/health
 ```
 
 ## Ejemplo Azure Container Apps
 
-Configura variables en Container App (sin `localhost`):
+Configura variables en Container App:
 
 ```text
 PORT=8080
 SERVICE_NAME=device-management-service
 CONFIG_SERVICE_URL=https://<config-service-domain>
 DATABASE_URL=<postgresql-connection-string>
-KAFKA_BROKERS=<broker1:9092,broker2:9092>
+KAFKA_BROKERS=<namespace>.servicebus.windows.net:9093
 KAFKA_SECURITY_PROTOCOL=SASL_SSL
 KAFKA_SASL_MECHANISM=PLAIN
-KAFKA_USERNAME=<kafka-username>
-KAFKA_PASSWORD=<kafka-password>
+KAFKA_USERNAME=$ConnectionString
+KAFKA_PASSWORD=Endpoint=sb://<namespace>.servicebus.windows.net/;SharedAccessKeyName=<policy>;SharedAccessKey=<key>;EntityPath=device.events
+KAFKA_ENABLED=true
+KAFKA_AUTO_CREATE_TOPICS=false
+TOPIC_DEVICE_EVENTS=device.events
+TOPIC_IAM_EVENTS=iam.events
 GIN_MODE=release
 ```
 
 Mapea el puerto de ingreso de la app a `8080`.
+
+Nota: este micro no consume eventos de IAM por Kafka actualmente. La relacion con `userId` se mantiene desde el request recibido por API/IAM. Si mas adelante agregas un consumer de IAM, debe leer desde `iam.events` y filtrar por `eventType`.
 
 ## Endpoints de negocio
 

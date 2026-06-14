@@ -87,12 +87,7 @@ func EnsureTopics(ctx context.Context, options ConnectionOptions, topics configu
 
 func uniqueTopics(topics configuration.KafkaTopics) []string {
 	ordered := []string{
-		strings.TrimSpace(topics.DeviceRegistered),
-		strings.TrimSpace(topics.DeviceStatusUpdated),
-		strings.TrimSpace(topics.DeviceLinked),
-		strings.TrimSpace(topics.DeviceUnlinked),
-		strings.TrimSpace(topics.DeviceConfigurationUpdated),
-		strings.TrimSpace(topics.DeviceEventRecorded),
+		strings.TrimSpace(topics.DeviceEvents),
 	}
 
 	seen := make(map[string]struct{}, len(ordered))
