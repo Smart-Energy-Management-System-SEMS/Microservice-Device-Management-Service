@@ -30,6 +30,7 @@ func NewRouter(dependencies RouterDependencies) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Logger(), gin.Recovery())
 	router.Use(httpinfrastructure.CORSMiddleware(dependencies.CORSAllowedOrigins))
+	registerSwaggerRoutes(router)
 
 	// Health-check endpoints used by load balancers / orchestrators (e.g.
 	// Kubernetes, Docker) to know the service is alive. We expose it both at the

@@ -145,17 +145,17 @@ func defaultRuntimeConfig(serviceName string) RuntimeConfig {
 		AutoMigrate:             getBoolEnv("AUTO_MIGRATE", false),
 		KafkaEnabled:            getBoolEnv("KAFKA_ENABLED", false),
 		KafkaAutoCreateTopics:   getBoolEnv("KAFKA_AUTO_CREATE_TOPICS", false),
-		KafkaBrokers:            splitCSV(getEnv("KAFKA_BROKERS", "")),
+		KafkaBrokers:            splitCSV(getFirstEnv([]string{"KAFKA_BROKERS", "KAFKA_BOOTSTRAP_SERVERS"}, "")),
 		KafkaSecurityProtocol:   getEnv("KAFKA_SECURITY_PROTOCOL", ""),
 		KafkaSASLMechanism:      getEnv("KAFKA_SASL_MECHANISM", ""),
-		KafkaUsername:           getEnv("KAFKA_USERNAME", ""),
-		KafkaPassword:           getEnv("KAFKA_PASSWORD", ""),
+		KafkaUsername:           getFirstEnv([]string{"KAFKA_USERNAME", "KAFKA_SASL_USERNAME"}, ""),
+		KafkaPassword:           getFirstEnv([]string{"KAFKA_PASSWORD", "KAFKA_SASL_PASSWORD"}, ""),
 		KafkaClientID:           getEnv("KAFKA_CLIENT_ID", serviceName),
 		KafkaWriteTimeoutMS:     getIntEnv("KAFKA_WRITE_TIMEOUT_MS", 2000),
 		APIGatewayAllowedOrigin: apiGatewayOrigin,
 		CORSAllowedOrigins:      corsAllowedOrigins,
 		KafkaTopics: KafkaTopics{
-			DeviceEvents: getEnv("TOPIC_DEVICE_EVENTS", "device.events"),
+			DeviceEvents: getFirstEnv([]string{"TOPIC_DEVICE_EVENTS", "KAFKA_TOPIC_DEVICE_EVENTS"}, "device.events"),
 		},
 	}
 }
@@ -233,6 +233,17 @@ func getEnv(key string, fallback string) string {
 	return value
 }
 
+// getFirstEnv returns the first non-empty env var from a list of aliases.
+func getFirstEnv(keys []string, fallback string) string {
+	for _, key := range keys {
+		value := strings.TrimSpace(os.Getenv(key))
+		if value != "" {
+			return value
+		}
+	}
+	return fallback
+}
+
 // getBoolEnv reads a boolean env var. It is lenient about what counts as true
 // ("true", "1" or "yes"), which is friendlier for people setting the variable.
 func getBoolEnv(key string, fallback bool) bool {
@@ -297,4 +308,3 @@ func appendIfMissing(values []string, value string) []string {
 	}
 	return append(values, value)
 }
-

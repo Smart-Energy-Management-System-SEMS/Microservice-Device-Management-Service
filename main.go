@@ -26,6 +26,13 @@ func main() {
 
 	config := appconfiguration.LoadAppConfig()
 	runtimeConfig := appconfiguration.ResolveRuntimeConfig(context.Background(), config)
+	log.Printf(
+		"kafka runtime config username=%q sasl_mechanism=%q security_protocol=%q brokers=%v",
+		runtimeConfig.KafkaUsername,
+		runtimeConfig.KafkaSASLMechanism,
+		runtimeConfig.KafkaSecurityProtocol,
+		runtimeConfig.KafkaBrokers,
+	)
 
 	db, err := gormconfiguration.ConnectDatabase(config.DatabaseURL)
 	if err != nil {

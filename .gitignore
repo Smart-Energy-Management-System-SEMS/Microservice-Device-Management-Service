@@ -1,6 +1,9 @@
 .env
 .env.*
+.env.local-kafka
+.env.azure-eventhubs
 !.env.example
+!.env.azure.example
 
 .gocache*/
 app

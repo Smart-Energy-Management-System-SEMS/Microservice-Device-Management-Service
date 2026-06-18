@@ -77,7 +77,7 @@ func (o ConnectionOptions) saslMechanism() (sasl.Mechanism, error) {
 		return nil, nil
 	}
 	if username == "" || password == "" {
-		return nil, fmt.Errorf("kafka SASL requires KAFKA_USERNAME and KAFKA_PASSWORD")
+		return nil, fmt.Errorf("kafka SASL requires KAFKA_USERNAME/KAFKA_SASL_USERNAME and KAFKA_PASSWORD/KAFKA_SASL_PASSWORD")
 	}
 
 	switch mechanismName {
