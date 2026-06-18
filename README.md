@@ -35,6 +35,8 @@ Variables adicionales soportadas:
 - `CORS_ALLOWED_ORIGINS`
 - `AUTO_MIGRATE`
 
+Si `POST /api/v1/device-management/devices/{id}/events` falla al persistir antes de Kafka, ejecuta al menos una vez con `AUTO_MIGRATE=true` para que GORM cree `device_events` si falta en la base local. Luego puedes volverlo a `false` si prefieres manejar el esquema manualmente.
+
 ## Kafka por dominio
 
 Este microservicio publica todos los eventos del dominio Device en un solo topic fisico:
