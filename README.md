@@ -30,9 +30,7 @@ Variables adicionales soportadas:
 - `KAFKA_ENABLED` (default `false`)
 - `KAFKA_AUTO_CREATE_TOPICS` (default `false`, recomendado `false` para Azure Event Hubs)
 - `KAFKA_CLIENT_ID`
-- `KAFKA_CONSUMER_GROUP`
 - `KAFKA_WRITE_TIMEOUT_MS`
-- `TOPIC_IAM_EVENTS`
 - `API_GATEWAY_ALLOWED_ORIGIN`
 - `CORS_ALLOWED_ORIGINS`
 - `AUTO_MIGRATE`
@@ -43,6 +41,7 @@ Este microservicio publica todos los eventos del dominio Device en un solo topic
 
 - `device.events`
 
+Los valores como `device.registered`, `device.status.updated` y los demas de Device son `eventType`, no topics fisicos.
 El tipo real del evento viaja en el payload JSON bajo `eventType`, por ejemplo:
 
 ```json
@@ -133,6 +132,8 @@ curl -i http://127.0.0.1:8083/api/v1/health
 
 ## Ejemplo Azure Container Apps
 
+Usa [`.env.azure.example`](</c:/Users/ASUS/Desktop/UPC/UPC-Ciclo Vll/Fundamentos de Arquitectura de Software/Sems/Microservice-Device-Management-Service/.env.azure.example>) como referencia.
+
 Configura variables en Container App:
 
 ```text
@@ -148,13 +149,10 @@ KAFKA_PASSWORD=Endpoint=sb://<namespace>.servicebus.windows.net/;SharedAccessKey
 KAFKA_ENABLED=true
 KAFKA_AUTO_CREATE_TOPICS=false
 TOPIC_DEVICE_EVENTS=device.events
-TOPIC_IAM_EVENTS=iam.events
 GIN_MODE=release
 ```
 
 Mapea el puerto de ingreso de la app a `8080`.
-
-Nota: este micro no consume eventos de IAM por Kafka actualmente. La relacion con `userId` se mantiene desde el request recibido por API/IAM. Si mas adelante agregas un consumer de IAM, debe leer desde `iam.events` y filtrar por `eventType`.
 
 ## Endpoints de negocio
 

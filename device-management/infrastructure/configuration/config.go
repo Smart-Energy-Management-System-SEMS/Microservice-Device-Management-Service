@@ -39,7 +39,6 @@ type RuntimeConfig struct {
 	KafkaUsername           string
 	KafkaPassword           string
 	KafkaClientID           string
-	KafkaConsumerGroup      string
 	KafkaWriteTimeoutMS     int
 	APIGatewayAllowedOrigin string
 	CORSAllowedOrigins      []string
@@ -51,7 +50,6 @@ type RuntimeConfig struct {
 // own topic names without recompiling.
 type KafkaTopics struct {
 	DeviceEvents string `json:"deviceEvents"`
-	IAMEvents    string `json:"iamEvents"`
 }
 
 // serviceConfigResponse mirrors the JSON returned by the central config
@@ -70,7 +68,6 @@ type serviceConfigResponse struct {
 	KafkaUsername           string      `json:"kafkaUsername"`
 	KafkaPassword           string      `json:"kafkaPassword"`
 	KafkaClientID           string      `json:"kafkaClientId"`
-	KafkaConsumerGroup      string      `json:"kafkaConsumerGroup"`
 	KafkaWriteTimeoutMS     int         `json:"kafkaWriteTimeoutMs"`
 	APIGatewayAllowedOrigin string      `json:"apiGatewayAllowedOrigin"`
 	CORSAllowedOrigins      []string    `json:"corsAllowedOrigins"`
@@ -154,22 +151,11 @@ func defaultRuntimeConfig(serviceName string) RuntimeConfig {
 		KafkaUsername:           getEnv("KAFKA_USERNAME", ""),
 		KafkaPassword:           getEnv("KAFKA_PASSWORD", ""),
 		KafkaClientID:           getEnv("KAFKA_CLIENT_ID", serviceName),
-		KafkaConsumerGroup:      getEnv("KAFKA_CONSUMER_GROUP", "device-management-group"),
 		KafkaWriteTimeoutMS:     getIntEnv("KAFKA_WRITE_TIMEOUT_MS", 2000),
 		APIGatewayAllowedOrigin: apiGatewayOrigin,
 		CORSAllowedOrigins:      corsAllowedOrigins,
 		KafkaTopics: KafkaTopics{
-			DeviceEvents: firstNonEmpty(
-				getEnv("TOPIC_DEVICE_EVENTS", ""),
-				getEnv("TOPIC_DEVICE_REGISTERED", ""),
-				getEnv("TOPIC_DEVICE_STATUS_UPDATED", ""),
-				getEnv("TOPIC_DEVICE_LINKED", ""),
-				getEnv("TOPIC_DEVICE_UNLINKED", ""),
-				getEnv("TOPIC_DEVICE_CONFIGURATION_UPDATED", ""),
-				getEnv("TOPIC_DEVICE_EVENT_RECORDED", ""),
-				"device.events",
-			),
-			IAMEvents: getEnv("TOPIC_IAM_EVENTS", "iam.events"),
+			DeviceEvents: getEnv("TOPIC_DEVICE_EVENTS", "device.events"),
 		},
 	}
 }
@@ -216,9 +202,6 @@ func mergeRuntimeConfig(base RuntimeConfig, remote *serviceConfigResponse) Runti
 	if strings.TrimSpace(remote.KafkaClientID) != "" {
 		base.KafkaClientID = strings.TrimSpace(remote.KafkaClientID)
 	}
-	if strings.TrimSpace(remote.KafkaConsumerGroup) != "" {
-		base.KafkaConsumerGroup = strings.TrimSpace(remote.KafkaConsumerGroup)
-	}
 	if remote.KafkaWriteTimeoutMS > 0 {
 		base.KafkaWriteTimeoutMS = remote.KafkaWriteTimeoutMS
 	}
@@ -232,9 +215,6 @@ func mergeRuntimeConfig(base RuntimeConfig, remote *serviceConfigResponse) Runti
 
 	if strings.TrimSpace(remote.KafkaTopics.DeviceEvents) != "" {
 		base.KafkaTopics.DeviceEvents = strings.TrimSpace(remote.KafkaTopics.DeviceEvents)
-	}
-	if strings.TrimSpace(remote.KafkaTopics.IAMEvents) != "" {
-		base.KafkaTopics.IAMEvents = strings.TrimSpace(remote.KafkaTopics.IAMEvents)
 	}
 
 	return base
@@ -318,11 +298,3 @@ func appendIfMissing(values []string, value string) []string {
 	return append(values, value)
 }
 
-func firstNonEmpty(values ...string) string {
-	for _, value := range values {
-		if strings.TrimSpace(value) != "" {
-			return strings.TrimSpace(value)
-		}
-	}
-	return ""
-}

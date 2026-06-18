@@ -16,7 +16,6 @@ import (
 type ConnectionOptions struct {
 	Brokers          []string
 	ClientID         string
-	ConsumerGroup    string
 	WriteTimeout     time.Duration
 	SecurityProtocol string
 	SASLMechanism    string
@@ -28,7 +27,6 @@ func NewConnectionOptions(config configuration.RuntimeConfig) ConnectionOptions 
 	return ConnectionOptions{
 		Brokers:          config.KafkaBrokers,
 		ClientID:         config.KafkaClientID,
-		ConsumerGroup:    config.KafkaConsumerGroup,
 		WriteTimeout:     time.Duration(config.KafkaWriteTimeoutMS) * time.Millisecond,
 		SecurityProtocol: config.KafkaSecurityProtocol,
 		SASLMechanism:    config.KafkaSASLMechanism,
