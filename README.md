@@ -1,129 +1,206 @@
 # Device Management Service
 
-Microservicio Go para SEMS que gestiona dispositivos, vinculaciones, configuraciones y eventos con arquitectura DDD.
+Microservicio Go de SEMS para gestion de dispositivos con arquitectura DDD.
 
-## Integración local con Gateway + Config Service
+## Health checks
 
-Entorno objetivo local:
-- Config Service: `http://localhost:8090`
-- API Gateway: `http://localhost:8081`
-- Microservicio: `http://localhost:8083`
+- `GET /api/v1/health`
+- `GET /api/v1/device-management/health` (compatibilidad existente)
 
-`base_url_local` final:
-- `http://localhost:8083`
+## Swagger
 
-`route_prefix`:
-- `/api/v1/device-management`
+Swagger queda habilitado sin autenticacion en:
 
-## Variables de entorno locales mínimas
+- `GET /swagger/index.html`
+- `GET /swagger/doc.json`
+
+Para pruebas locales, abre `http://localhost:8083/swagger/index.html` o cambia el puerto segun tu `.env` activo.
+
+## Variables requeridas
+
+Usa `.env.example` como base.
 
 ```env
-PORT=8083
+PORT=8080
 SERVICE_NAME=device-management-service
-CONFIG_SERVICE_URL=http://localhost:8090
-DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DB_NAME?sslmode=require
-API_GATEWAY_ALLOWED_ORIGIN=http://localhost:8081
-CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://localhost:8081
+APP_ENV=local
+CONFIG_SERVICE_URL=
+DATABASE_URL=
+KAFKA_BOOTSTRAP_SERVERS=
+KAFKA_BROKERS=
+KAFKA_SECURITY_PROTOCOL=
+KAFKA_SASL_MECHANISM=
+KAFKA_USERNAME=
+KAFKA_PASSWORD=
+KAFKA_SASL_USERNAME=
+KAFKA_SASL_PASSWORD=
+KAFKA_TOPIC_DEVICE_EVENTS=device.events
+TOPIC_DEVICE_EVENTS=device.events
+GIN_MODE=release
 ```
 
-Sensibles:
-- `DATABASE_URL`
+Variables adicionales soportadas:
 
-No sensibles:
-- `PORT`
-- `SERVICE_NAME`
-- `CONFIG_SERVICE_URL`
+- `KAFKA_ENABLED` (default `false`)
+- `KAFKA_AUTO_CREATE_TOPICS` (default `false`, recomendado `false` para Azure Event Hubs)
+- `KAFKA_CLIENT_ID`
+- `KAFKA_CONSUMER_GROUP`
+- `KAFKA_WRITE_TIMEOUT_MS`
 - `API_GATEWAY_ALLOWED_ORIGIN`
 - `CORS_ALLOWED_ORIGINS`
+- `AUTO_MIGRATE`
 
-## Configuración remota desde Config Service
+Tambien acepta aliases utiles para homologar otros micros:
 
-Este servicio consulta:
+- `KAFKA_BOOTSTRAP_SERVERS` como fallback de `KAFKA_BROKERS`
+- `KAFKA_SASL_USERNAME` como fallback de `KAFKA_USERNAME`
+- `KAFKA_SASL_PASSWORD` como fallback de `KAFKA_PASSWORD`
+- `KAFKA_TOPIC_DEVICE_EVENTS` como fallback de `TOPIC_DEVICE_EVENTS`
 
-```http
-GET {CONFIG_SERVICE_URL}/api/v1/config/{service-name}
+Si `POST /api/v1/device-management/devices/{id}/events` falla al persistir antes de Kafka, ejecuta al menos una vez con `AUTO_MIGRATE=true` para que GORM cree `device_events` si falta en la base local. Luego puedes volverlo a `false` si prefieres manejar el esquema manualmente.
+
+## Kafka por dominio
+
+Este microservicio publica todos los eventos del dominio Device en un solo topic fisico:
+
+- `device.events`
+
+Los valores como `device.registered`, `device.status.updated` y los demas de Device son `eventType`, no topics fisicos.
+El tipo real del evento viaja en el payload JSON bajo `eventType`, por ejemplo:
+
+```json
+{
+  "eventId": "0a3ab694-8382-43f0-847e-8c1ae87fce75",
+  "eventType": "device.registered",
+  "deviceId": "9ccfa2e6-52a8-4cc3-98af-1d2fc46ba0d8",
+  "userId": "9f4f7aef-b4ae-4284-a28c-a2dc2dfe4a93",
+  "occurredAt": "2026-06-12T22:30:00Z",
+  "payload": {
+    "externalDeviceCode": "MED-001",
+    "deviceType": "meter",
+    "status": "ACTIVE"
+  }
+}
 ```
 
-Si Config Service no responde, usa fallback local sin romper el arranque.
+Eventos publicados por este micro:
 
-## Health check
+- `device.registered`
+- `device.linked`
+- `device.unlinked`
+- `device.status.updated`
+- `device.configuration.updated`
+- `device.event.recorded`
 
-Endpoint público sin autenticación:
+## Docker build
 
-```http
-GET /api/v1/device-management/health
+```bash
+docker build -t device-management-service:local .
 ```
 
-## Endpoints reales (verificados en código)
+## Docker run
 
-```http
-POST   /api/v1/device-management/devices
-GET    /api/v1/device-management/devices
-GET    /api/v1/device-management/devices/:deviceId
-GET    /api/v1/device-management/users/:userId/devices
-PUT    /api/v1/device-management/devices/:deviceId
-PATCH  /api/v1/device-management/devices/:deviceId/status
-DELETE /api/v1/device-management/devices/:deviceId
-POST   /api/v1/device-management/devices/:deviceId/bindings
-GET    /api/v1/device-management/devices/:deviceId/bindings
-GET    /api/v1/device-management/users/:userId/bindings
-PATCH  /api/v1/device-management/bindings/:bindingId/unlink
-POST   /api/v1/device-management/devices/:deviceId/configurations
-GET    /api/v1/device-management/devices/:deviceId/configurations
-PUT    /api/v1/device-management/configurations/:configurationId
-POST   /api/v1/device-management/devices/:deviceId/events
-GET    /api/v1/device-management/devices/:deviceId/events
+Ejemplo usando archivo `.env`:
+
+```bash
+docker run --name device-management-service \
+  --env-file .env \
+  -p 8083:8083 \
+  device-management-service:local
 ```
 
-## Auth/JWT
+Si quieres usar `PORT=8080`:
 
-Este microservicio no aplica middleware JWT propio. La autenticación/autorización se delega al API Gateway.
-- Si `API_GATEWAY_AUTH_REQUIRED=false` en Gateway: se puede probar sin token.
-- Endpoint público recomendado siempre: `GET /api/v1/device-management/health`.
+```bash
+docker run --name device-management-service \
+  --env-file .env \
+  -e PORT=8080 \
+  -p 8080:8080 \
+  device-management-service:local
+```
 
-## Dependencias locales
+## Ejemplo local completo
 
-- PostgreSQL accesible con `DATABASE_URL`.
-- Kafka opcional para publicación de eventos.
+Archivos locales recomendados:
 
-Kafka local (ejemplo):
+- [`.env.local-kafka`](</c:/Users/ASUS/Desktop/UPC/UPC-Ciclo Vll/Fundamentos de Arquitectura de Software/Sems/Microservice-Device-Management-Service/.env.local-kafka>)
+- [`.env.azure-eventhubs`](</c:/Users/ASUS/Desktop/UPC/UPC-Ciclo Vll/Fundamentos de Arquitectura de Software/Sems/Microservice-Device-Management-Service/.env.azure-eventhubs>)
+- [`.env`](</c:/Users/ASUS/Desktop/UPC/UPC-Ciclo Vll/Fundamentos de Arquitectura de Software/Sems/Microservice-Device-Management-Service/.env>) como archivo activo
+
+Cuando quieras cambiar de modo, copia el contenido del perfil deseado sobre `.env`.
+
+1. Levanta la infraestructura:
+
 ```bash
 docker compose up -d
 ```
 
-## Pruebas mínimas
+2. Configura `.env` con:
 
-Health del microservicio:
+```env
+PORT=8083
+CONFIG_SERVICE_URL=http://config-service:8090
+KAFKA_BROKERS=kafka:9092
+KAFKA_ENABLED=true
+KAFKA_AUTO_CREATE_TOPICS=true
+KAFKA_TOPIC_DEVICE_EVENTS=device.events
+TOPIC_DEVICE_EVENTS=device.events
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DB_NAME?sslmode=require
+```
+
+3. Ejecuta contenedor:
+
 ```bash
-curl -i http://localhost:8083/api/v1/device-management/health
+docker run --name device-management-service \
+  --env-file .env \
+  -p 8083:8083 \
+  device-management-service:local
 ```
 
-Endpoint principal del microservicio:
+4. Verifica health:
+
 ```bash
-curl -i http://localhost:8083/api/v1/device-management/devices
+curl -i http://127.0.0.1:8083/api/v1/health
 ```
 
-Endpoint vía Gateway (proxied):
+5. Abre Swagger:
+
 ```bash
-curl -i http://localhost:8081/api/v1/device-management/health
+http://127.0.0.1:8083/swagger/index.html
 ```
 
-## Registro para Config Service
+## Ejemplo Azure Container Apps
 
-Objeto listo para `GET/POST` de servicios (sin secretos):
+Usa [`.env.azure.example`](</c:/Users/ASUS/Desktop/UPC/UPC-Ciclo Vll/Fundamentos de Arquitectura de Software/Sems/Microservice-Device-Management-Service/.env.azure.example>) como referencia.
 
-```json
-{
-  "name": "device-management-service",
-  "base_url_local": "http://localhost:8083",
-  "base_url_deploy": "https://device-management-service.<tu-dominio>",
-  "route_prefix": "/api/v1/device-management",
-  "main_endpoints": [
-    "GET /api/v1/device-management/health",
-    "POST /api/v1/device-management/devices",
-    "GET /api/v1/device-management/devices",
-    "PATCH /api/v1/device-management/devices/:deviceId/status",
-    "POST /api/v1/device-management/devices/:deviceId/events"
-  ]
-}
+Configura variables en Container App:
+
+```text
+PORT=8080
+SERVICE_NAME=device-management-service
+APP_ENV=azure
+CONFIG_SERVICE_URL=https://<config-service-domain>
+DATABASE_URL=<postgresql-connection-string>
+KAFKA_BOOTSTRAP_SERVERS=<namespace>.servicebus.windows.net:9093
+KAFKA_BROKERS=<namespace>.servicebus.windows.net:9093
+KAFKA_SECURITY_PROTOCOL=SASL_SSL
+KAFKA_SASL_MECHANISM=PLAIN
+KAFKA_USERNAME=$ConnectionString
+KAFKA_PASSWORD=Endpoint=sb://<namespace>.servicebus.windows.net/;SharedAccessKeyName=<policy>;SharedAccessKey=<key>;EntityPath=device.events
+KAFKA_SASL_USERNAME=$ConnectionString
+KAFKA_SASL_PASSWORD=Endpoint=sb://<namespace>.servicebus.windows.net/;SharedAccessKeyName=<policy>;SharedAccessKey=<key>;EntityPath=device.events
+KAFKA_ENABLED=true
+KAFKA_AUTO_CREATE_TOPICS=false
+KAFKA_CONSUMER_GROUP=device-management-group
+KAFKA_TOPIC_DEVICE_EVENTS=device.events
+TOPIC_DEVICE_EVENTS=device.events
+GIN_MODE=release
 ```
+
+Mapea el puerto de ingreso de la app a `8080`.
+
+## Endpoints de negocio
+
+Se mantienen sin cambios bajo el prefijo:
+
+- `/api/v1/device-management`

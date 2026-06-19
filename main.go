@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"log"
-	"time"
 
 	"device-management-service/device-management/application/commandservices"
 	"device-management-service/device-management/application/eventhandlers"
@@ -27,6 +26,13 @@ func main() {
 
 	config := appconfiguration.LoadAppConfig()
 	runtimeConfig := appconfiguration.ResolveRuntimeConfig(context.Background(), config)
+	log.Printf(
+		"kafka runtime config username=%q sasl_mechanism=%q security_protocol=%q brokers=%v",
+		runtimeConfig.KafkaUsername,
+		runtimeConfig.KafkaSASLMechanism,
+		runtimeConfig.KafkaSecurityProtocol,
+		runtimeConfig.KafkaBrokers,
+	)
 
 	db, err := gormconfiguration.ConnectDatabase(config.DatabaseURL)
 	if err != nil {
@@ -47,7 +53,18 @@ func main() {
 
 	var deviceEventPublisher outboundservices.DeviceEventPublisher = kafkamessaging.NewNoopPublisher()
 	if runtimeConfig.KafkaEnabled {
-		kafkaProducer := kafkamessaging.NewProducer(runtimeConfig.KafkaBrokers, runtimeConfig.KafkaClientID, time.Duration(runtimeConfig.KafkaWriteTimeoutMS)*time.Millisecond)
+		kafkaOptions := kafkamessaging.NewConnectionOptions(runtimeConfig)
+		if runtimeConfig.KafkaAutoCreateTopics {
+			if err := kafkamessaging.EnsureTopics(context.Background(), kafkaOptions, runtimeConfig.KafkaTopics); err != nil {
+				log.Printf("kafka topic bootstrap failed: %v", err)
+			}
+		} else {
+			log.Println("kafka topic bootstrap skipped (KAFKA_AUTO_CREATE_TOPICS=false)")
+		}
+		kafkaProducer, err := kafkamessaging.NewProducer(kafkaOptions)
+		if err != nil {
+			log.Fatalf("kafka producer configuration failed: %v", err)
+		}
 		defer kafkaProducer.Close()
 		deviceEventPublisher = kafkaProducer
 		log.Printf("kafka publishing enabled with brokers=%v timeout_ms=%d", runtimeConfig.KafkaBrokers, runtimeConfig.KafkaWriteTimeoutMS)

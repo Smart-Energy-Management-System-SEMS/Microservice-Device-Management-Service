@@ -32,7 +32,7 @@ ENV APP_ENV=production \
 EXPOSE 8083
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD curl -fsS "http://localhost:${PORT}/api/v1/device-management/health" || exit 1
+    CMD curl -fsS "http://localhost:${PORT}/api/v1/health" || exit 1
 
 USER appuser
 

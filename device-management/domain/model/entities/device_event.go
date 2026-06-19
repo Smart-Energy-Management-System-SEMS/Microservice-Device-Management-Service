@@ -8,6 +8,14 @@ import (
 	"github.com/google/uuid"
 )
 
+var allowedDeviceEventTypes = map[string]struct{}{
+	"CONNECTED":    {},
+	"DISCONNECTED": {},
+	"ERROR":        {},
+	"UPDATED":      {},
+	"REMOVED":      {},
+}
+
 type DeviceEvent struct {
 	EventID     uuid.UUID
 	DeviceID    uuid.UUID
@@ -20,8 +28,12 @@ func NewDeviceEvent(deviceID uuid.UUID, eventType string, description *string, o
 	if deviceID == uuid.Nil {
 		return nil, dmerrors.NewValidationError("device_id is required")
 	}
-	if strings.TrimSpace(eventType) == "" {
+	normalizedEventType := strings.ToUpper(strings.TrimSpace(eventType))
+	if normalizedEventType == "" {
 		return nil, dmerrors.NewValidationError("event_type is required")
+	}
+	if _, ok := allowedDeviceEventTypes[normalizedEventType]; !ok {
+		return nil, dmerrors.NewValidationError("event_type must be one of CONNECTED, DISCONNECTED, ERROR, UPDATED or REMOVED")
 	}
 	eventTime := time.Now().UTC()
 	if occurredAt != nil {
@@ -30,7 +42,7 @@ func NewDeviceEvent(deviceID uuid.UUID, eventType string, description *string, o
 	return &DeviceEvent{
 		EventID:     uuid.New(),
 		DeviceID:    deviceID,
-		EventType:   strings.TrimSpace(eventType),
+		EventType:   normalizedEventType,
 		Description: description,
 		OccurredAt:  eventTime,
 	}, nil
